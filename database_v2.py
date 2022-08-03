@@ -1,6 +1,5 @@
-from rctrs_engine_v2 import Species
-from rctrs_engine_v2 import Reaction
-
+from rctrs_engine import Species
+from rctrs_engine import Reaction
 
 NOCTANE = Species('n-C8H18', 114.23, [32.37317283, 105.8326168, 1635.6, 72.94353683, 746.4, 200, 1500])
 ISOOCTANE = Species('i-C8H18', 114.23, [0, 0, 0, 0, 0, 0, 0])
@@ -26,4 +25,4 @@ PROPANE = Species('Propane', 44.09652, [14.20512086, 30.24027897, 844.31, 20.580
 rxn1 = Reaction('Cl2 + Propene --> AllylCl + HCl', [CL2, PROPYLENE, C3H5CL, HCL], [-1, -1, 1, 1], -113.4919251, 1500000, 63.2672)
 rxn2 = Reaction('Cl2 + Propene --> 12-ClC3', [CL2, PROPYLENE, C3H6CL2], [-1, -1, 1], -186.5439605, 90.46, 15.95636)
 rxn3 = Reaction('C2H6 --> C2H4 + H2', [ETHANE, ETHYLENE, H2], [-1, 1, 1], 137.06780078125, 79432800000000, 297.2628)  # pre-exp is in [l/(mol*s)]
-rxn4 = Reaction('C3H8 --> C2H6 + H2', [PROPANE, PROPYLENE, H2], [-1, 1, 1], 124.319, 794328234.7, 159.0984)  # pre-exp is in [l/(mol*s)]
+rxn4 = Reaction('C3H8 --> C2H6 + H2', [PROPANE, PROPYLENE, H2], [-1, 1, 1], 124.319, 5.01187E+13, 293.076)  # pre-exp is in [l/(mol*s)]
