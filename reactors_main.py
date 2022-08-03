@@ -12,11 +12,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import rctrs_engine_v3 as rctr
+import rctrs_engine as rctr
 import database_v2 as db
-import eos_engine_v4 as eos
+import eos_engine as eos
 import subprocess as sp
-from eos_engine_v4 import flash_calc_PR_EOS_z_only as get_z_factor
+from eos_engine import flash_calc_PR_EOS_z_only as get_z_factor
 
 '''Initializing Data'''
 print('Initializing calculations...')
@@ -62,7 +62,7 @@ print('Starting calculations...')
 cstreactor = rctr.PFRreactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset1)
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.Simulation(inlet_stream, 1e-6, True)
+outlet_stream, calc_hist = cstreactor.Simulation(inlet_stream, 1e-3, True)
 print('Calculations completed successfully!')
 
 '''Saving results to .xlsx file'''

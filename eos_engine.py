@@ -5,12 +5,12 @@ _v4.3
 import math
 import sys
 import os
-import eos_interfaces_v1 as intrf
+import eos_interfaces as intrf
 
 import pandas as pd
 import numpy as np
 import time
-from rctrs_engine_v3 import Stream
+from rctrs_engine import Stream
 # from rctrs_engine_v3 import Species
 
 ### Units Converter
