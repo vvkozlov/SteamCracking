@@ -36,7 +36,7 @@ rxnset1 = [rxn1, rxn2]
 rxn1_compset = rxn1.reagents
 rxn2_compset = rxn2.reagents
 '''Compset for all species in reactor'''
-rctr_compset = set(rxn1_compset + rxn2_compset)
+rctr_compset = list(set(rxn1_compset + rxn2_compset))
 
 
 
@@ -62,7 +62,7 @@ print('Starting calculations...')
 cstreactor = rctr.PFRreactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset1)
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.Simulation(inlet_stream, 1e-3, True)
+outlet_stream, calc_hist = cstreactor.Simulation(inlet_stream, 1e-2, True)
 print('Calculations completed successfully!')
 
 '''Saving results to .xlsx file'''
