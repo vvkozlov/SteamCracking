@@ -12,6 +12,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import math
+
 
 class Species:
     '''
@@ -22,15 +24,17 @@ class Species:
     .Cp(T: float)
         Calculates Heat Capacity (constant Pressure) at specified temperature
     '''
-    def __init__(self, name: str, MW: float, CPIGDP: list):
+    def __init__(self, name: str, MW: float, CPIGDP: list, DHFORM: float):
         '''
         :param name: Species Name
         :param MW: [g/mol] Molar Weight
         :param CPIGDP: [K, cal/mol] Coefficients for DIPPR Equation 107
+        :param DHFORM: [J/kgmol] Pure Component Ideal Gas Enthalpy of Formation @ 25 degC
         '''
         self.name = name
         self.MW = MW
         self.CPIGDP = CPIGDP
+        self.DHFORM = DHFORM
 
     def CPIG(self, T: float):
         '''
@@ -39,8 +43,8 @@ class Species:
 
         :param T: [K] Temperature
         :return: [J/(mol*K)] Specific Heat Capacity
-        '''
-        '''previously used fourth-order equation:
+
+        previously used fourth-order equation:
         4.1887 * (self.Cp_coeffs[0] + self.Cp_coeffs[1] * T
                          + self.Cp_coeffs[2] * T ** 2 + self.Cp_coeffs[3] * T ** 3) '''
         C1 = self.CPIGDP[0]
@@ -57,7 +61,22 @@ class Species:
             # sys.exit()
             CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
         return CPIG
-    # ADD ENTALPY CALCULATION!!
+
+    def HIGV(self, T: float, numsteps= 10000):
+        '''
+        Returns Pure Component Ideal Gas Enthalpy of vapor phase [J/kgmol] calculated by direct integration
+        (Results for propane converge with Aspen Plus to forth digit)
+
+        :param T: [K] Temperature
+        :return: [J/kgmol] Pure Component Ideal Gas Enthalpy
+        '''
+        init_T = 25 + 273.15
+        dT = (T - init_T) / numsteps
+        T_vector = list(map(lambda x: init_T + dT * x, range(numsteps + 1)))
+        dH_vector = np.array(list(map(lambda x: dT * self.CPIG(x), T_vector)))
+        H = self.DHFORM + dH_vector.sum() * 1000
+        # Try to find ways to reduce computing time
+        return H
 
 
 class Stream:
