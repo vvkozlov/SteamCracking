@@ -109,17 +109,10 @@ class Stream:
         self.P = P
         self.T = T
         R = 8.31446261815324  # Gas Constant [J/(mole*K)]
-
-        molweight = 0
-        CPIG = 0
-        massflow = 0
-        for comp in self.compset:
-            molweight += self.COMPMOLFR[comp.name] * comp.MW
-            CPIG += self.COMPMOLFR[comp.name] * comp.CPIG(T)
-            massflow += self.FLMOL * self.COMPMOLFR[comp.name] * comp.MW
+        dict_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
 
         '''[kg/kgmol] Stream molar weight'''
-        self.MW = molweight
+        self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.MW, self.compset)))
 
         '''[kg/m3] Stream density @ Actual conditions'''
         self.RHOIG = self.MW / (R * self.T / (self.P * 1000))
@@ -128,10 +121,11 @@ class Stream:
         self.STDRHOIG = self.MW/ (R * self.T)
 
         '''[J/(mol*K)] Stream ideal gas heat capacity at constant pressure'''
-        self.CPIG = CPIG
+        self.CPIG = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.CPIG(T), self.compset)))
+        # Check convergence with Hysys!
 
         '''[kg/hr] Stream mass flow'''
-        self.FLMASS = massflow
+        self.FLMASS = sum(list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] * x.MW, self.compset)))
 
         '''[m3/hr] Stream volume flow @ Actual conditions'''
         self.FLVOLIG = self.FLMOL * self.MW / self.RHOIG
@@ -139,27 +133,21 @@ class Stream:
         '''[sm3/hr] Stream volume flow @ Standard conditions'''
         self.STDVOLIG = self.FLMOL * self.MW/ self.STDRHOIG
 
-        x_mass = dict()
-        molconc = dict()
-        indmolflows = dict()
-        indmassflows = dict()
-        for comp in self.compset:
-            x_mass[comp.name] = self.COMPMOLFR[comp.name] * comp.MW / self.MW
-            molconc[comp.name] = self.FLMOL * self.COMPMOLFR[comp.name] / self.FLVOLIG
-            indmolflows[comp.name] = self.FLMOL * self.COMPMOLFR[comp.name]
-            indmassflows[comp.name] = indmolflows[comp.name] * comp.MW
-
         '''[kgmol/hr] Molar flow of individual components'''
-        self.FLINDMOL = indmolflows
+        indmolflows = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name], self.compset))
+        self.FLINDMOL = dict(zip(dict_keys, indmolflows))
 
         '''[mass. fract.] Stream composition in terms of mass fractions'''
-        self.COMPMASSFR = x_mass
+        x_mass = list(map(lambda x: self.COMPMOLFR[x.name] * x.MW / self.MW, self.compset))
+        self.COMPMASSFR = dict(zip(dict_keys, x_mass))
 
         '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions'''
-        self.COMPMOLCIG = molconc
+        molconc = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOLIG, self.compset))
+        self.COMPMOLCIG = dict(zip(dict_keys, molconc))
 
         '''[kg/hr] Mass flow of individual components'''
-        self.FLINDMASS = indmassflows
+        indmassflows = list(map(lambda x: self.FLINDMOL[x.name] * x.MW, self.compset))
+        self.FLINDMASS = dict(zip(dict_keys, indmassflows))
 
 
 class Reaction:
@@ -238,7 +226,7 @@ class PFRreactor:
         self.numtubes = numtubes
         self.rxnset = rxnset
 
-    def Simulation(self, inlet: Stream, dl: float, log: bool) -> tuple[Stream, pd.DataFrame]:
+    def simulation(self, inlet: Stream, dl: float, log: bool) -> tuple[Stream, pd.DataFrame]:
         '''
         Performs  integration along reactor length with Euler method for reactions listed
 
