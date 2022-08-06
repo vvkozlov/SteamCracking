@@ -18,8 +18,8 @@ import eos_engine as eos
 import subprocess as sp
 from eos_engine import flash_calc_PR_EOS_z_only as get_z_factor
 
-'''Initializing Data'''
 print('Initializing calculations...')
+
 '''Setting up reagents for both reactions'''
 PROPANE = db.PROPANE
 PROPYLENE = db.PROPYLENE
@@ -37,8 +37,6 @@ rxn1_compset = rxn1.reagents
 rxn2_compset = rxn2.reagents
 '''Compset for all species in reactor'''
 rctr_compset = list(set(rxn1_compset + rxn2_compset))
-
-
 
 '''Feed stream mole composition [mol. frac.]'''
 comp_x0 = dict({ETHANE.name : 0.8, PROPANE.name : 0.2, ETHYLENE.name : 0, PROPYLENE.name : 0, H2.name: 0})
@@ -62,16 +60,16 @@ print('Starting calculations...')
 
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
-print('Calculations completed successfully!')
+print('Calculations completed!')
 
-'''Saving results to .xlsx file'''
-filepath = os.path.join(os.getcwd(), 'rctr_results.xlsx')
+'''Saving results to .txt file'''
+filename = 'log.txt'
+filepath = os.path.join(os.getcwd(), filename)
 print('Saving Results to {}...'.format(filepath))
-calc_hist.to_excel(filepath)
-log = open('log.txt', 'w')
-log.write(calc_hist.to_string())
-log.close()
-sp.Popen(['notepad', os.path.join(os.getcwd(), 'log.txt')])
+log_file = open(filename, 'w')
+log_file.write(calc_hist.to_string())
+log_file.close()
+sp.Popen(['notepad', os.path.join(os.getcwd(), filename)])
 
 '''Plotting diagrams in matplotlib'''
 print('Plotting graphs...')
