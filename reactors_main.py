@@ -47,7 +47,7 @@ P = 0.1  # Reaction Pressure [MPa]
 T0 = 1000 + 273.15  # Initial Temperature [K]
 
 '''Reactor rating'''
-tube_L = 1000  # Reaction tubes length [mm]
+tube_L = 10000  # Reaction tubes length [mm]
 tube_ID = 50  # Reaction tubes Internal Diameter [mm]
 tubes_No = 1  # Reaction tubes number
 
@@ -61,6 +61,7 @@ print('Starting calculations...')
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('Calculations completed!')
+print('Outlet stream composition:\n', outlet_stream.COMPMOLFR)
 
 '''Saving results to .txt file'''
 filename = 'log.txt'
