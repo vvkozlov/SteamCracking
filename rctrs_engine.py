@@ -90,7 +90,7 @@ class Stream:
         - MW [kg/kgmol] Molar weight
         - RHOIG [kg/m3] Ideal gas density @ Actual conditions
         - STDRHOIG [kg/sm3] Ideal gas density @ Std. Conditions
-        - CPIG [kJ/(mol*K)] Stream ideal gas heat capacity at constant pressure
+        - CPIG [kJ/(kgmol*K)] Stream ideal gas heat capacity at constant pressure
         - FLMASS [kg/hr] Mass flow
         - FLVOLIG [m3/hr] Actual ideal gas volume flow
         - FLSTDVOLIG [sm3/h3]  Standard ideal gas volume flow
@@ -242,34 +242,34 @@ class PFRreactor:
         t = 0  # [s]
         temp_df = pd.DataFrame()
         while l < self.length:
-            print('\tintegration l = {:.3f} m'.format(l))
-            print('\t            t = {:.3f} s'.format(t))
             dt = cell_volume / flow.FLVOLIG * 3600  # [s]
             act_C = flow.COMPMOLCIG  # [kgmol/m3]
             act_T = flow.T  # [K]
             act_P = flow.P  # [MPa]
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
-            dT = 0
+            dQ = 0
             output_line = dict()
             ############################################
             '''matrices!!!'''
             ############################################
+            print('\tintegration l = {:.3f} m'.format(l))
+            print('\t            t = {:.3f} s'.format(t))
+            # one step forward should be printed
             for rxn in self.rxnset:
-                rate = rxn.rate(act_T, act_C)  # [kgmol/(m3*s)]
+                rate = rxn.rate(act_T, flow.COMPMOLCIG)  # [kgmol/(m3*s)]
                 output_line['"{}" rate'.format(rxn.name)] = rate
-                dT += -rxn.dH * 1000 * rate  # [K]
+                dQ += -rxn.dH * 1000 * rate  # [kJ/(m3*s)]
                 for comp in rxn.reagents:
                     act_C[comp.name] += dt * rxn.stoic[comp.name] * rate  # [s*kgmol/m3/s=kgmol/m3]
+            new_T = act_T + dt * dQ * 0.008314463 * act_T / act_P / (act_Cp) # [K]
+            # new_T = act_T
             dict_keys = list(map(lambda x: x.name, flow.compset))
-            new_compmolfr = dict()
             new_compmolfr = dict(zip(dict_keys, list(map(lambda x: act_C[x.name] / sum(act_C.values()), flow.compset))))
             new_molflow = sum(list(map(lambda x: flow.FLVOLIG * act_C[x.name], flow.compset)))
-            # new_T = act_T + dt * dT * 0.00845 * act_T / act_P / (act_Cp * 1000) # [K]
-            new_T = act_T
             ### UNITS FOR HEAT BALANCE EQUATION?
             flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
             output_line.update(flow.COMPMOLFR.copy())
-            output_line['FLMASS'] = flow.FLMASS
+            output_line['FLMOL'] = flow.FLMOL
             temp_df = temp_df.append(output_line, ignore_index=True)
             list_l.append(l)
             list_T.append(new_T)
@@ -292,11 +292,11 @@ def plot_results(results: pd.DataFrame):
     axes[0].grid()
     axes[0].set_ylabel('Molar Fraction, [mol. frac.]')
     for param in results.columns[0:-1]:
-        if 'rate' not in param and 'FLMASS' not in param:
+        if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param:
             axes[0].plot(results.index, results[param], label= param)
     axes[0].legend()
     axes[1].set_ylabel('Temperature, [K]')
-    axes[1].set_xlabel('Time, [s]')
+    axes[1].set_xlabel('Length, [m]')
     axes[1].plot(results.index, results['T'])
     plt.grid()
     plt.show()
