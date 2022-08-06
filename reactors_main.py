@@ -71,6 +71,9 @@ log_file = open(filename, 'w')
 log_file.write(calc_hist.to_string())
 log_file.close()
 sp.Popen(['notepad', os.path.join(os.getcwd(), filename)])
+'''Saving results to .csv file'''
+filename = 'log.csv'
+calc_hist.to_csv(filename)
 
 '''Plotting diagrams in matplotlib'''
 print('Plotting graphs...')
