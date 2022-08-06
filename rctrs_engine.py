@@ -21,8 +21,10 @@ class Species:
 
     Methods
     ----------
-    .Cp(T: float)
+    .CPIG(T: float)
         Calculates Heat Capacity (constant Pressure) at specified temperature
+    .HIGV(T: float)
+        Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
     def __init__(self, name: str, MW: float, CPIGDP: list, DHFORM: float):
         '''
@@ -172,10 +174,7 @@ class Reaction:
         '''
         self.name = name
         self.reagents = reagents
-        compnameslist = list()
-        for comp in reagents:
-            compnameslist.append(comp.name)
-        self.stoic = dict(zip(compnameslist, stoic))
+        self.stoic = dict(zip(list(map(lambda x: x.name, self.reagents)), stoic))
         self.dH = dH
         self.k0 = k0
         self.E0 = E0
@@ -188,21 +187,21 @@ class Reaction:
         :param conc: [kmol/m3] Concentrations of components
         :return: Reaction Rate
         '''
-        '''Multiplier that considers contribution of concentrations to Arrhenius Law'''
-        mult = 1
-        for comp in self.reagents:
-            if self.stoic[comp.name] < 0:
-                # Now calculates with concentrations in [kmol/m3]!
-                mult = mult * ((conc[comp.name] / 1000) ** abs(self.stoic[comp.name]))
-                '''Factor of 1000 added because initial units was mol/hr while
-                concentrations calculated in kmol/hr'''
-                #USE REACTION ORDER INSTEAD OF STOIC COEFFS !?
-        # Needs to be revised!
         '''
         equation used: v = k * prod([I] ^ i)
             where k = k0 * exp(E0 / R / T)
         '''
-        rate = mult * self.k0 * np.exp(-self.E0 / 8.3144 / T)
+        mult = 1  # [kgkol/m3]^n Multiplier that considers contribution of concentrations
+        for comp in self.reagents:
+            if self.stoic[comp.name] < 0:
+                mult = mult * ((conc[comp.name]) ** abs(self.stoic[comp.name]))
+                #USE REACTION ORDER INSTEAD OF STOIC COEFFS !?
+        # Needs to be revised!
+
+        rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
+        '''
+        from Dante, 1979 k0 reported in [l / (mol * s)] --> for second-oreder reactions rate is in [kgmol/(m3*s)]
+        '''
         return rate
 
 
@@ -218,7 +217,7 @@ class PFRreactor:
         '''
         :param length: [m] Reactor tube length
         :param diameter: [m] Reactor tube diameter
-        :param numtubes: [] Number of reactor tubes
+        :param numtubes: [No] Number of reactor tubes
         :param rxnset: [list of Reaction] Set of reactions occurring in reactor
         '''
         self.length = length
@@ -251,28 +250,27 @@ class PFRreactor:
             act_P = flow.P  # [MPa]
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
             dT = 0
+            output_line = dict()
             ############################################
             '''matrices!!!'''
             ############################################
-            generation = dict()
-            for comp in flow.compset:
-                generation[comp.name] = 0
             for rxn in self.rxnset:
                 rate = rxn.rate(act_T, act_C)  # [kgmol/(m3*s)]
+                output_line['"{}" rate'.format(rxn.name)] = rate
                 dT += -rxn.dH * 1000 * rate  # [K]
                 for comp in rxn.reagents:
-                    generation[comp.name] += dt * rxn.stoic[comp.name] * rate * cell_volume  # [kgmol/s]
-            new_indmolflows = dict()
-            new_molfract = dict()
-            new_molflow = flow.FLMOL + sum(generation.values())
-            for comp in flow.compset:
-                new_indmolflows[comp.name] = flow.FLINDMOL[comp.name] + generation[comp.name] * 3600 / 1000  # [kgmol/hr]
-                new_molfract[comp.name] = new_indmolflows[comp.name] / new_molflow  # [mol. fract.]
+                    act_C[comp.name] += dt * rxn.stoic[comp.name] * rate  # [s*kgmol/m3/s=kgmol/m3]
+            dict_keys = list(map(lambda x: x.name, flow.compset))
+            new_compmolfr = dict()
+            new_compmolfr = dict(zip(dict_keys, list(map(lambda x: act_C[x.name] / sum(act_C.values()), flow.compset))))
+            new_molflow = sum(list(map(lambda x: flow.FLVOLIG * act_C[x.name], flow.compset)))
             # new_T = act_T + dt * dT * 0.00845 * act_T / act_P / (act_Cp * 1000) # [K]
             new_T = act_T
             ### UNITS FOR HEAT BALANCE EQUATION?
-            flow = Stream(flow.compset, new_molfract, new_molflow, act_P, new_T)
-            temp_df = temp_df.append(flow.COMPMOLFR, ignore_index=True)
+            flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
+            output_line.update(flow.COMPMOLFR.copy())
+            output_line['FLMASS'] = flow.FLMASS
+            temp_df = temp_df.append(output_line, ignore_index=True)
             list_l.append(l)
             list_T.append(new_T)
             l += dl
@@ -293,9 +291,9 @@ def plot_results(results: pd.DataFrame):
     axes[0].set_title('Composition and Temperature of Reaction Mixture vs. Time')
     axes[0].grid()
     axes[0].set_ylabel('Molar Fraction, [mol. frac.]')
-    for param in results.columns[0:5]:
-        # if 'x - ' in param:
-        axes[0].plot(results.index, results[param], label= param)
+    for param in results.columns[0:-1]:
+        if 'rate' not in param and 'FLMASS' not in param:
+            axes[0].plot(results.index, results[param], label= param)
     axes[0].legend()
     axes[1].set_ylabel('Temperature, [K]')
     axes[1].set_xlabel('Time, [s]')
