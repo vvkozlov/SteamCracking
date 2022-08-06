@@ -48,21 +48,20 @@ molflow = 1  # Feed stream molar flow [kgmol/hr]
 P = 0.1  # Reaction Pressure [MPa]
 T0 = 1000 + 273.15  # Initial Temperature [K]
 
-'''Resifence time for Plug-Flow Reactor application'''
+'''Reactor rating'''
 tube_L = 1000  # Reaction tubes length [mm]
 tube_ID = 50  # Reaction tubes Internal Diameter [mm]
 tubes_No = 1  # Reaction tubes number
 
-'''Residience time estimated with voluetric flowrate at inlet only'''
+'''Initializing feed Stream'''
 inlet_stream = rctr.Stream(rctr_compset, comp_x0, molflow, P, T0)
-# print('Actual Volume Flow = {} [m3/h3]'.format(inlet_stream.FLVOLIG * get_z_factor(inlet_stream)))
-print(inlet_stream.COMPMOLCIG)
-print('Starting calculations...')
+
 '''Creating Reactor model'''
 cstreactor = rctr.PFRreactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset1)
+print('Starting calculations...')
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.Simulation(inlet_stream, 1e-2, True)
+outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('Calculations completed successfully!')
 
 '''Saving results to .xlsx file'''
