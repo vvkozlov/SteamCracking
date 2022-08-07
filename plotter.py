@@ -14,8 +14,8 @@ axes[0].grid()
 axes[0].set_ylabel('Molar Fraction, [mol. frac.]')
 for param in main_plot_data.columns[1:-1]:
 	if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param:
-		axes[0].plot(main_plot_data['l'], main_plot_data[param], label=param, color= 'red', linewidth= 0.5)
-		axes[0].plot(secondary_plot_data['l'], secondary_plot_data[param], label=param,
+		axes[0].plot(main_plot_data['l'], main_plot_data[param], label=param + '-solver', color= 'red', linewidth= 0.5)
+		axes[0].plot(secondary_plot_data['l'], secondary_plot_data[param], label=param + '-hysys',
 					 color= 'blue', linewidth= 0.5, linestyle= '--')
 
 axes[0].legend()
@@ -27,10 +27,10 @@ axes[1].plot(secondary_plot_data['l'], secondary_plot_data['T'], color= 'blue', 
 axes[2].set_ylabel('Reaction Rates, [kgmol/(m3*s)]')
 for param in main_plot_data.columns[0:-1]:
 	if 'rate' in param:
-		axes[2].plot(main_plot_data['l'], main_plot_data[param], label=param, color= 'red', linewidth= 0.5)
-		axes[2].plot(secondary_plot_data['l'], secondary_plot_data[param], label=param,
+		axes[2].plot(main_plot_data['l'], main_plot_data[param], label=param + '-solver', color= 'red', linewidth= 0.5)
+		axes[2].plot(secondary_plot_data['l'], secondary_plot_data[param], label=param + '-hysys',
 					 color= 'blue', linewidth= 0.5, linestyle= '--')
-axes[2].set_ylim([0, 0.05])
+axes[2].legend()
 
 plt.grid()
 plt.show()
