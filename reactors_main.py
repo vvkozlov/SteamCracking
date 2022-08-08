@@ -1,22 +1,14 @@
 '''
-Header      : reactors_v5.py
+Header      : reactors_main.py
 Created     : 22.06.2022
-Modified    : 24.07.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
-Description :
-Changes     :
-
+Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolidate all scripts together.
 '''
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+
 import os
 import rctrs_engine as rctr
-import database_v2 as db
-import eos_engine as eos
 import subprocess as sp
-from eos_engine import flash_calc_PR_EOS_z_only as get_z_factor
 import reactors_config as cfg
 
 print('Initializing calculations...')

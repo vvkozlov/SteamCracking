@@ -1,6 +1,15 @@
+'''
+Header      : plotter.py
+Created     : 06.08.2022
+Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
+Description : Plots two .csv datasets next to each other. Used to compare results with Hysys or Plus.
+'''
+
+
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+
 
 main_plot_filename = 'log_solver_chlorine.csv'
 secondary_plot_filename = 'log_hysys_chlorine.csv'

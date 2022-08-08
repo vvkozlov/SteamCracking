@@ -1,12 +1,10 @@
 '''
-Header      : rctrs_engine_v1.py
+Header      : rctrs_engine.py
 Created     : 09.07.2022
-Modified    : 09.07.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
-Description : Retrieved from reactors_v3.py as individual module
-Changes     :
+Description : Mathematical solver for Plug-Flow Reactor
 '''
-import sys
+
 
 import numpy as np
 import pandas as pd
