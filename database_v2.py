@@ -9,6 +9,10 @@ Description : Storage of component's properties and reaction's parameters.
 from rctrs_engine import Species
 from rctrs_engine import Reaction
 
+'''
+Species template:
+SPECIES = Species('NAME', MW [kg/kgmol], [DIPPR107Coefficients x7], DHFORM [J/kgmol])
+'''
 NOCTANE = Species('n-C8H18', 114.23, [32.37317283, 105.8326168, 1635.6, 72.94353683, 746.4, 200, 1500], 0)
 ISOOCTANE = Species('i-C8H18', 114.23, [0, 0, 0, 0, 0, 0, 0], 0)
 NBUTANE = Species('C4H10', 58.12, [0, 0, 0, 0, 0, 0, 0], 0)
@@ -29,7 +33,11 @@ C3H6CL2 = Species('12-ClC3', 112.98604, [18.78714054, 41.62845132, 1715.7, 30.15
 HCL = Species('HCl', 36.46064, [6.964029808, 2.161077673, 2093.8, -0.02555651094, 120, 50, 1500], 0)
 ETHANE = Species('Ethane', 30.0699005126953, [10.570364, 20.23908474, 872.24, 16.03372504, 2430.4, 298.15, 1500], 0)
 PROPANE = Species('Propane', 44.09652, [14.20512086, 30.24027897, 844.31, 20.58015668, 2482.7, 298.15, 1500], -104680000)
-'''---------------------------------------------------------------------------'''
+
+'''
+Reactions template:
+REACTION = Reaction('NAME', [Species xn], [stoic xn], dH [kJ/mol], k0, E0 [kJ/mol])
+'''
 rxn1 = Reaction('Cl2 + Propene --> AllylCl + HCl', [CL2, PROPYLENE, C3H5CL, HCL], [-1, -1, 1, 1], -113.4919251, 1500000, 63.2672)
 rxn2 = Reaction('Cl2 + Propene --> 12-ClC3', [CL2, PROPYLENE, C3H6CL2], [-1, -1, 1], -186.5439605, 90.46, 15.95636)
 rxn3 = Reaction('C2H6 --> C2H4 + H2', [ETHANE, ETHYLENE, H2], [-1, 1, 1], 137.06780078125, 79432800000000, 297.2628)  # pre-exp is in [l/(mol*s)]
