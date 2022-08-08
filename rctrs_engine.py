@@ -13,6 +13,37 @@ import os
 import math
 
 
+class UnitsConverter:
+    class Pressure:
+        def bara_to_kgfpcm2g(pressure_bara: float):
+            return pressure_bara * 1.0197162129779282 - 1.033227
+        def kgfpcm2g_to_bara(pressure_kgfpcm2: float):
+            return (pressure_kgfpcm2 + 1.033227) / 1.0197162129779282
+        def psi_to_kgfpcm2(pressure_psi: float):
+            return pressure_psi * 0.0703069579640175
+        def bar_to_psi(pressure_bar: float):
+            return pressure_bar * 14.503773773
+        def bar_to_kPa(pressure_bar: float):
+            return pressure_bar * 100
+        def kPa_to_psi(pressure_kPa: float):
+            return pressure_kPa * 0.1450377377
+        def MPa_to_psi(pressure_MPa: float):
+            #ATTENTION!
+            return pressure_MPa * 1000 * 0.1450377377
+        def psi_to_kPa(pressure_psi: float):
+            return pressure_psi / 0.1450377377
+    class Flowrate:
+        def sm3d_to_sm3y(flowrate_sm3pday: float):
+            return flowrate_sm3pday * 365
+    class Temperature:
+        def C_to_R(temperature_C: float):
+            return (temperature_C + 273.15) * 9 / 5
+        def R_to_K(temperature_R: float):
+            return temperature_R * 5 / 9
+        def C_to_K(temperature_C: float):
+            return temperature_C + 273.15
+
+
 class Species:
     '''
     Describes chemical species
