@@ -42,6 +42,8 @@ class UnitsConverter:
             return temperature_R * 5 / 9
         def C_to_K(temperature_C: float):
             return temperature_C + 273.15
+        def K_to_R(temperature_K: float):
+            return temperature_K * 1.8
 
 
 class Species:
@@ -55,17 +57,24 @@ class Species:
     .HIGV(T: float)
         Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
-    def __init__(self, name: str, MW: float, CPIGDP: list, DHFORM: float):
+    def __init__(self, name: str, MW: float, CPIGDP: list, DHFORM: float, PC: float, TC: float,
+                 OMEGA: float):
         '''
         :param name: Species Name
         :param MW: [g/mol] Molar Weight
         :param CPIGDP: [K, cal/mol] Coefficients for DIPPR Equation 107
         :param DHFORM: [J/kgmol] Pure Component Ideal Gas Enthalpy of Formation @ 25 degC
+        :param PC: [kPa] Critical Pressure
+        :param TC: [C] Critical Pressure
+        :param OMEGA: [dmls.] Pitzer Acentric Factor
         '''
         self.name = name
         self.MW = MW
         self.CPIGDP = CPIGDP
         self.DHFORM = DHFORM
+        self.PC = PC
+        self.TC = TC
+        self.OMEGA = OMEGA
 
     def CPIG(self, T: float):
         '''
@@ -106,7 +115,7 @@ class Species:
         T_vector = list(map(lambda x: init_T + dT * x, range(numsteps + 1)))
         dH_vector = np.array(list(map(lambda x: dT * self.CPIG(x), T_vector)))
         H = self.DHFORM + dH_vector.sum() * 1000
-        # Try to find ways to reduce computing time
+        # Reduce computing time!
         return H
 
 
@@ -139,7 +148,8 @@ class Stream:
         self.FLMOL = molflow
         self.P = P
         self.T = T
-        R = 8.31446261815324  # Gas Constant [J/(mole*K)]
+        R = 8.31446261815324  # [J/(mole*K)] Gas Constant
+        R_field = 10.731577089016  # [psi*ft3/(lbmol*R)] Gas Constant
         dict_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
 
         '''[kg/kgmol] Stream molar weight'''
@@ -179,6 +189,24 @@ class Stream:
         '''[kg/hr] Mass flow of individual components'''
         indmassflows = list(map(lambda x: self.FLINDMOL[x.name] * x.MW, self.compset))
         self.FLINDMASS = dict(zip(dict_keys, indmassflows))
+
+        '''Z-factor'''
+        '''Component-dependent variables'''
+        Pc_arr = np.array(list(map(lambda x: UnitsConverter.Pressure.kPa_to_psi(x.PC), self.compset)))  # Array of PC [psi]
+        Tc_arr = np.array(list(map(lambda x: UnitsConverter.Temperature.C_to_R(x.TC), self.compset)))  # Array of TC [R]
+        w_arr = np.array(list((map(lambda x: x.OMEGA, self.compset)))) # Array of Acentric factors [dmls.]
+        Tr_arr = UnitsConverter.Temperature.K_to_R(self.T) / Tc_arr  # Array of Reduced Temperatures [R/R]
+        kappa_arr = np.where(w_arr > 0.49,
+                             0.379642 + 1.4853 * w_arr - 0.164423 * w_arr ** 2 + 0.01666 * w_arr ** 3,
+                             0.37464 + 1.5422 * w_arr - 0.26992 * (w_arr ** 2))
+        '''For heavy hydrocarbon comps (w>0.49) used 1980's modification'''
+        alfa_arr = np.where(np.logical_and(Tc_arr == 374.149011230469, Tr_arr ** 0.5 < 0.85),  # why second condition?
+                        (1.0085677 + 0.82154 * (1 - Tr_arr ** 0.5)) ** 2,
+                        (1 + kappa_arr * (1 - Tr_arr ** 0.5)) ** 2)
+        '''For water used 1980's modification'''
+        ac_arr = 0.45724 * (R_field ** 2) * (Tc_arr ** 2) / Pc_arr
+        a_i_arr = ac_arr * alfa_arr  # Array of first comp-dependent variables 'ai'
+        b_i_arr = 0.07780 * R_field * Tc_arr / Pc_arr  # Array of second comp-dependent variables 'bi'
 
 
 class Reaction:
