@@ -4,16 +4,18 @@ Created     : 02.08.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : Storage of component's properties and reaction's parameters.
 '''
-
+import pandas as pd
 
 from rctrs_engine import Species
 from rctrs_engine import Reaction
 
 '''
-Species template:
+Pure components properties database:
+- DIPPR equation coefficients and DHFORM used from Aspen Plus V11
+- PC, TC and OMEGA used from Aspen Hysys V10/V11 
+
+Example:
 SPECIES = Species('NAME', MW [kg/kgmol], [DIPPR107Coefficients x7], DHFORM [J/kgmol], PC [kPa], TC [degC], OMEGA)
-DIPPR equation coefficients and DHFORM used from Aspen Plus V11
-PC, TC and OMEGA used from Aspen Hysys V10/V11 
 '''
 NOCTANE = Species('n-C8H18', 114.232002258301, [32.37317283, 105.8326168, 1635.6, 72.94353683, 746.4, 200, 1500], 0,
 				  2496.6201171875, 295.448022460938, 0.401800006628037)
@@ -45,7 +47,9 @@ PROPANE = Species('Propane', 44.09652, [14.20512086, 30.24027897, 844.31, 20.580
 				  4256.66015625, 96.7480102539063, 0.152400001883507)
 
 '''
-Reactions template:
+Reactions data and properties database:
+
+Example:
 REACTION = Reaction('NAME', [Species xn], [stoic xn], dH [kJ/mol], k0, E0 [kJ/mol])
 '''
 rxn1 = Reaction('Cl2 + Propene --> AllylCl + HCl', [CL2, PROPYLENE, C3H5CL, HCL], [-1, -1, 1, 1], -113.4919251, 1500000, 63.2672)
