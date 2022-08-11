@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import math
+import PRBKV_database as binary_db  # move to separate database
 
 
 class UnitsConverter:
@@ -57,7 +58,7 @@ class Species:
     .HIGV(T: float)
         Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
-    def __init__(self, name: str, MW: float, CPIGDP: list, DHFORM: float, PC: float, TC: float,
+    def __init__(self, name: str, MW: float, CPIGDP: list[float], DHFORM: float, PC: float, TC: float,
                  OMEGA: float):
         '''
         :param name: Species Name
@@ -151,6 +152,7 @@ class Stream:
         R = 8.31446261815324  # [J/(mole*K)] Gas Constant
         R_field = 10.731577089016  # [psi*ft3/(lbmol*R)] Gas Constant
         dict_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
+        PRKBV1_df = binary_db.PRKBV1.loc[dict_keys, dict_keys]
 
         '''[kg/kgmol] Stream molar weight'''
         self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.MW, self.compset)))
@@ -190,7 +192,7 @@ class Stream:
         indmassflows = list(map(lambda x: self.FLINDMOL[x.name] * x.MW, self.compset))
         self.FLINDMASS = dict(zip(dict_keys, indmassflows))
 
-        '''Z-factor'''
+        '''Z-factor'''  # Only for one phase (vapor)
         '''Component-dependent variables'''
         Pc_arr = np.array(list(map(lambda x: UnitsConverter.Pressure.kPa_to_psi(x.PC), self.compset)))  # Array of PC [psi]
         Tc_arr = np.array(list(map(lambda x: UnitsConverter.Temperature.C_to_R(x.TC), self.compset)))  # Array of TC [R]
@@ -205,8 +207,14 @@ class Stream:
                         (1 + kappa_arr * (1 - Tr_arr ** 0.5)) ** 2)
         '''For water used 1980's modification'''
         ac_arr = 0.45724 * (R_field ** 2) * (Tc_arr ** 2) / Pc_arr
-        a_i_arr = ac_arr * alfa_arr  # Array of first comp-dependent variables 'ai'
-        b_i_arr = 0.07780 * R_field * Tc_arr / Pc_arr  # Array of second comp-dependent variables 'bi'
+        ai_arr = ac_arr * alfa_arr  # Array of first comp-dependent variables 'ai'
+        bi_arr = 0.07780 * R_field * Tc_arr / Pc_arr  # Array of second comp-dependent variables 'bi'
+
+        '''Phase-dependent variables'''  # Only for one phase (vapor)
+        x_arr = np.array(list(map(lambda x: self.COMPMOLFR[x], dict_keys)))  # Array of components molar fractions
+        bj = np.sum(x_arr * bi_arr)  # Second phase-depnendent variable 'bj'
+
+
 
 
 class Reaction:
