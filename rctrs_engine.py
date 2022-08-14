@@ -7,6 +7,8 @@ Description : Mathematical solver for Plug-Flow Reactor
 References:
         [1] A. Jebarjadi - Multi-Phase Multi-Component Equilibrium Flash Calculations for CompFlow Bio using
             Modified Volume-Translated Peng-Robinson EOS (2017)'
+        [2] M. Abramowitz - Handbook of Mathematical Functions with Formulas, Graphs and Matematical Tables
+
 '''
 
 
@@ -236,6 +238,48 @@ class Stream:
         # FOR ONE PHASE (VAPOR) ONLY!
         Aijprime_arr = 1 / aj * 2 * ai_arr ** 0.5 * np.sum(xij_arr * ai_arr ** 0.5 * (1 - deltail_matr), axis= 1)  # Array of first phase-component-dependent variables 'Aij''
         Bijprime = bi_arr / bj
+
+        '''Z-factor (eq. 3-31 from [1], solution of cubic equation from [2])'''
+        a2 = -(1- Bj)
+        a1 = Aj - 2 * Bj - 3 * Bj**2
+        a0 = -(Aj * Bj - Bj ** 2 - Bj ** 3)
+        q = 1 / 3 * a1 - 1 / 9 * a2 ** 2
+        r = 1 / 6 * (a1 * a2 - 3 * a0) - 1 / 27 * a2 ** 3
+        ''' Description of possible roots:
+        if (q**3 + r**2) > 0:
+            Equation has one real root and a pair of complex conjugate roots...
+        elif (q**3 + r**2) == 0:
+            Equation has all real roots and at leas two of them are equal...
+        else:
+            Equation has all real roots...'''
+        '''smallvar introduced to avoid problems when expression is too small '''
+        if abs(q ** 3 + r ** 2) <= 1e-5:  # this convergence criteria may affect equicomp results
+            smallvar = 0
+        else:
+            smallvar = (q ** 3 + r ** 2) ** (1 / 2)
+        s1 = np.cbrt(r + smallvar)
+        s2 = np.cbrt(r - smallvar)
+        z1 = (s1 + s2) - a2 / 3
+        z2 = complex(-1 / 2 * (s1 + s2) - a2 / 3, (3 ** (1 / 2)) / 2 * (s1 - s2))
+        z3 = complex(-1 / 2 * (s1 + s2) - a2 / 3, -(3 ** (1 / 2)) / 2 * (s1 - s2))
+        '''Check roots as in 3.7.33 [2]'''
+        check1 = abs((z1 + z2 + z3) - complex(-1 * a2, 0)) < 0.001
+        check2 = abs((z1 * z2 + z1 * z3 + z2 * z3) - complex(a1, 0)) < 0.001
+        check3 = abs((z1 * z2 * z3) - complex(-1 * a0, 0)) < 0.001
+        if check1 and check2 and check3:
+            pass
+        else:
+            print('\nWARNING: Roots for z-factor equations are NOT CHECKED successfuly!\n')
+        roots = list()
+        '''Eliminate small imaginary parts (option to improve stability)'''
+        for root in [z1, z2, z3]:
+            if abs(root.imag) < 10 ** -6:
+                root = root.real
+            roots.append(root)
+        '''Choose appropriate for specific phase z-factor (currently only vapor phase)
+           Z-factor for vapor phase is the the real one with the highest value'''
+        zfactor = max([root for root in roots if (not (type(root) == complex) and root >= 0 and root >= Bj)])
+        self.z = zfactor
 
 
 
