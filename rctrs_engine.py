@@ -166,7 +166,7 @@ class Stream:
         '''[kg/kgmol] Stream molar weight'''
         self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.MW, self.compset)))
 
-        '''[kg/m3] Stream density @ Actual conditions'''
+        '''[kg/m3] Stream density @ Actual conditions (Ideal Gas)'''
         self.RHOIG = self.MW / (R * self.T / (self.P * 1000))
 
         '''[kg/sm3] Stream density @ Standard conditions'''
@@ -179,7 +179,7 @@ class Stream:
         '''[kg/hr] Stream mass flow'''
         self.FLMASS = sum(list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] * x.MW, self.compset)))
 
-        '''[m3/hr] Stream volume flow @ Actual conditions'''
+        '''[m3/hr] Stream volume flow @ Actual conditions (Ideal Gas)'''
         self.FLVOLIG = self.FLMOL * self.MW / self.RHOIG
 
         '''[sm3/hr] Stream volume flow @ Standard conditions'''
@@ -193,7 +193,7 @@ class Stream:
         x_mass = list(map(lambda x: self.COMPMOLFR[x.name] * x.MW / self.MW, self.compset))
         self.COMPMASSFR = dict(zip(comp_keys, x_mass))
 
-        '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions'''
+        '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions (Ideal Gas)'''
         molconc = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOLIG, self.compset))
         self.COMPMOLCIG = dict(zip(comp_keys, molconc))
 
@@ -234,13 +234,13 @@ class Stream:
         Aj = aj * P_field / R_field ** 2 / T_field ** 2  # First phase-dependent variable 'Aj'
         Bj = bj * P_field / R_field / T_field  # Second phase-dependent variable 'Bj'
 
-        '''Phase-component-dependent variables (eq. 3-20 an 3-21 from [1])'''
+        '''Phase-component-dependent variables for fugacities calculations (eq. 3-20 an 3-21 from [1])'''
         # FOR ONE PHASE (VAPOR) ONLY!
         Aijprime_arr = 1 / aj * 2 * ai_arr ** 0.5 * np.sum(xij_arr * ai_arr ** 0.5 * (1 - deltail_matr), axis= 1)  # Array of first phase-component-dependent variables 'Aij''
         Bijprime = bi_arr / bj
 
         '''Z-factor (eq. 3-31 from [1], solution of cubic equation from [2])'''
-        a2 = -(1- Bj)
+        a2 = -(1 - Bj)
         a1 = Aj - 2 * Bj - 3 * Bj**2
         a0 = -(Aj * Bj - Bj ** 2 - Bj ** 3)
         q = 1 / 3 * a1 - 1 / 9 * a2 ** 2
@@ -253,7 +253,7 @@ class Stream:
         else:
             Equation has all real roots...'''
         '''smallvar introduced to avoid problems when expression is too small '''
-        if abs(q ** 3 + r ** 2) <= 1e-5:  # this convergence criteria may affect equicomp results
+        if abs(q ** 3 + r ** 2) <= 1e-8:  # this convergence criteria may affect equicomp results
             smallvar = 0
         else:
             smallvar = (q ** 3 + r ** 2) ** (1 / 2)
@@ -269,7 +269,7 @@ class Stream:
         if check1 and check2 and check3:
             pass
         else:
-            print('\nWARNING: Roots for z-factor equations are NOT CHECKED successfuly!\n')
+            print('\nWARNING: Roots for z-factor equations are NOT CHECKED successfuly!\n(try to relax "smallvar" critera)')
         roots = list()
         '''Eliminate small imaginary parts (option to improve stability)'''
         for root in [z1, z2, z3]:
@@ -279,10 +279,17 @@ class Stream:
         '''Choose appropriate for specific phase z-factor (currently only vapor phase)
            Z-factor for vapor phase is the the real one with the highest value'''
         zfactor = max([root for root in roots if (not (type(root) == complex) and root >= 0 and root >= Bj)])
-        self.z = zfactor
+        self.Z = zfactor
 
+        '''[kg/m3] Stream density @ Actual conditions (Peng-Robinson EOS)'''
+        self.RHOPR = self.MW / self.Z / (R * self.T / (self.P * 1000))
 
+        '''[m3/hr] Stream volume flow @ Actual conditions (Peng-Robinson EOS)'''
+        self.FLVOLPR = self.FLMOL * self.MW / self.RHOPR
 
+        '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions (Peng-Robinson EOS)'''
+        molconcPR = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOLPR, self.compset))
+        self.COMPMOLCPR = dict(zip(comp_keys, molconcPR))
 
 
 class Reaction:
@@ -375,8 +382,8 @@ class PFRreactor:
         t = 0  # [s]
         temp_df = pd.DataFrame()
         while l < self.length:
-            dt = cell_volume / flow.FLVOLIG * 3600  # [s]
-            act_C = flow.COMPMOLCIG  # [kgmol/m3]
+            dt = cell_volume / flow.FLVOLPR * 3600  # [s]
+            act_C = flow.COMPMOLCPR  # [kgmol/m3]
             act_T = flow.T  # [K]
             act_P = flow.P  # [MPa]
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
@@ -389,16 +396,15 @@ class PFRreactor:
             print('\t            t = {:.3f} s'.format(t))
             # one step forward should be printed
             for rxn in self.rxnset:
-                rate = rxn.rate(act_T, flow.COMPMOLCIG)  # [kgmol/(m3*s)]
+                rate = rxn.rate(act_T, flow.COMPMOLCPR)  # [kgmol/(m3*s)]
                 output_line['"{}" rate'.format(rxn.name)] = rate
                 dQ += -rxn.dH * 1000 * rate  # [kJ/(m3*s)]
                 for comp in rxn.reagents:
                     act_C[comp.name] += dt * rxn.stoic[comp.name] * rate  # [s*kgmol/m3/s=kgmol/m3]
             new_T = act_T + dt * dQ * 0.008314463 * act_T / act_P / (act_Cp) # [K]
-            # new_T = act_T
             dict_keys = list(map(lambda x: x.name, flow.compset))
             new_compmolfr = dict(zip(dict_keys, list(map(lambda x: act_C[x.name] / sum(act_C.values()), flow.compset))))
-            new_molflow = sum(list(map(lambda x: flow.FLVOLIG * act_C[x.name], flow.compset)))
+            new_molflow = sum(list(map(lambda x: flow.FLVOLPR * act_C[x.name], flow.compset)))
             ### UNITS FOR HEAT BALANCE EQUATION?
             flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
             output_line.update(flow.COMPMOLFR.copy())
