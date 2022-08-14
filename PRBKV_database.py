@@ -7,6 +7,11 @@ Binary coefficients for PR EOS database:
 '''
 '''k1 (PRKBV1) coefficients'''
 PRKBV1 = pd.DataFrame()
+PRKBV1.loc['Propane', 'Propane'] = 0
+PRKBV1.loc['Propene', 'Propene'] = 0
+PRKBV1.loc['Ethane', 'Ethane'] = 0
+PRKBV1.loc['Ethylene', 'Ethylene'] = 0
+PRKBV1.loc['Hydrogen', 'Hydrogen'] = 0
 PRKBV1.loc['Propane', 'Propene'] = 7.89980031549931e-003
 PRKBV1.loc['Propene', 'Propane'] = 7.89980031549931e-003
 PRKBV1.loc['Propane', 'Ethane'] = 1.25795602798462e-003
