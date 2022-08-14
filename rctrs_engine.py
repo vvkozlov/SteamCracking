@@ -3,6 +3,10 @@ Header      : rctrs_engine.py
 Created     : 09.07.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : Mathematical solver for Plug-Flow Reactor
+
+References:
+        [1] A. Jebarjadi - Multi-Phase Multi-Component Equilibrium Flash Calculations for CompFlow Bio using
+            Modified Volume-Translated Peng-Robinson EOS (2017)'
 '''
 
 
@@ -151,8 +155,11 @@ class Stream:
         self.T = T
         R = 8.31446261815324  # [J/(mole*K)] Gas Constant
         R_field = 10.731577089016  # [psi*ft3/(lbmol*R)] Gas Constant
-        dict_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
-        PRKBV1_df = binary_db.PRKBV1.loc[dict_keys, dict_keys]
+        comp_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
+        PRKBV1_df = binary_db.PRKBV1.loc[comp_keys, comp_keys]
+        '''Make sure that order of elements is same as for other arrays'''
+        PRKBV1_df = PRKBV1_df.reindex(columns= comp_keys, index= comp_keys)
+
 
         '''[kg/kgmol] Stream molar weight'''
         self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.MW, self.compset)))
@@ -178,21 +185,22 @@ class Stream:
 
         '''[kgmol/hr] Molar flow of individual components'''
         indmolflows = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name], self.compset))
-        self.FLINDMOL = dict(zip(dict_keys, indmolflows))
+        self.FLINDMOL = dict(zip(comp_keys, indmolflows))
 
         '''[mass. fract.] Stream composition in terms of mass fractions'''
         x_mass = list(map(lambda x: self.COMPMOLFR[x.name] * x.MW / self.MW, self.compset))
-        self.COMPMASSFR = dict(zip(dict_keys, x_mass))
+        self.COMPMASSFR = dict(zip(comp_keys, x_mass))
 
         '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions'''
         molconc = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOLIG, self.compset))
-        self.COMPMOLCIG = dict(zip(dict_keys, molconc))
+        self.COMPMOLCIG = dict(zip(comp_keys, molconc))
 
         '''[kg/hr] Mass flow of individual components'''
         indmassflows = list(map(lambda x: self.FLINDMOL[x.name] * x.MW, self.compset))
-        self.FLINDMASS = dict(zip(dict_keys, indmassflows))
+        self.FLINDMASS = dict(zip(comp_keys, indmassflows))
 
-        '''Z-factor'''  # Only for one phase (vapor)
+        '''Z-factor'''
+        # FOR ONE PHASE (VAPOR) ONLY!
         '''Component-dependent variables'''
         Pc_arr = np.array(list(map(lambda x: UnitsConverter.Pressure.kPa_to_psi(x.PC), self.compset)))  # Array of PC [psi]
         Tc_arr = np.array(list(map(lambda x: UnitsConverter.Temperature.C_to_R(x.TC), self.compset)))  # Array of TC [R]
@@ -210,9 +218,25 @@ class Stream:
         ai_arr = ac_arr * alfa_arr  # Array of first comp-dependent variables 'ai'
         bi_arr = 0.07780 * R_field * Tc_arr / Pc_arr  # Array of second comp-dependent variables 'bi'
 
-        '''Phase-dependent variables'''  # Only for one phase (vapor)
-        x_arr = np.array(list(map(lambda x: self.COMPMOLFR[x], dict_keys)))  # Array of components molar fractions
-        bj = np.sum(x_arr * bi_arr)  # Second phase-depnendent variable 'bj'
+        ''' Mixing rules (eq. 3-22 from [1])'''
+        xij_arr = np.array(list(map(lambda x: self.COMPMOLFR[x], comp_keys)))  # Array of comp molar fractions [mol. fract.]
+        xlj_arr = np.reshape(xij_arr, (len(xij_arr), 1))  # Array of comp molar fractions [mol. fract.] in columns
+        al_arr = np.reshape(ai_arr, (len(ai_arr), 1))  # Array of first comp-dependent variables 'ai' in columns
+        deltail_matr = np.array(PRKBV1_df)  # Matrix of binary interaction coefficients 'deltail'
+        aj = np.sum(xij_arr * xlj_arr * (ai_arr * al_arr) ** 0.5 * (1 - deltail_matr))  # First mixing rule variable 'aj'
+        bj = np.sum(xij_arr * bi_arr)  # Second mixing rule variable 'bj'
+
+        '''Phase-dependent variables (eq. 3-29, 3-30 from [1])'''  # FOR ONE PHASE (VAPOR) ONLY!
+        P_field = UnitsConverter.Pressure.MPa_to_psi(self.P)
+        T_field = UnitsConverter.Temperature.K_to_R(self.T)
+        Aj = aj * P_field / R_field ** 2 / T_field ** 2  # First phase-dependent variable 'Aj'
+        Bj = bj * P_field / R_field / T_field  # Second phase-dependent variable 'Bj'
+
+        '''Phase-component-dependent variables (eq. 3-20 an 3-21 from [1])'''
+        # FOR ONE PHASE (VAPOR) ONLY!
+        Aijprime_arr = 1 / aj * 2 * ai_arr ** 0.5 * np.sum(xij_arr * ai_arr ** 0.5 * (1 - deltail_matr), axis= 1)  # Array of first phase-component-dependent variables 'Aij''
+        Bijprime = bi_arr / bj
+
 
 
 
