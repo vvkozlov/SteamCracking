@@ -38,7 +38,9 @@ print('Starting calculations...')
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('Calculations completed!')
-print('Outlet stream composition:\n', outlet_stream.COMPMOLFR)
+print('\nOutlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
+print('Outlet stream temperature [K]:\n\t', outlet_stream.T)
+print('Outlet stream act. vol. flow [m3/h]:\n\t', outlet_stream.FLVOLPR, '\n')
 
 '''Saving results to .txt file'''
 filename = 'log.txt'
