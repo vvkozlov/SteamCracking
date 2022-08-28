@@ -161,6 +161,7 @@ class Stream:
         PRKBV1_df = binary_db.PRKBV1.loc[comp_keys, comp_keys]
         '''Make sure that order of elements is same as for other arrays'''
         PRKBV1_df = PRKBV1_df.reindex(columns= comp_keys, index= comp_keys)
+        # WARNING! If there are components in keys list that are not present in database DataFrame, NaN cells would be created
 
 
         '''[kg/kgmol] Stream molar weight'''
@@ -381,6 +382,20 @@ class PFRreactor:
         list_T = []
         t = 0  # [s]
         temp_df = pd.DataFrame()
+        '''Keys for components and reactions lists - to make sure that all matrices are uniform'''
+        comp_keys = list(flow.COMPMOLFR.keys())  # Some more elegant way to create matching list should be found
+        rxn_keys = list(map(lambda x: x.name, self.rxnset))
+        '''Reaction stoich coefficients matrix [No. rxns x No. comps]'''
+        stoic_df = pd.DataFrame(index = rxn_keys, columns= comp_keys)
+        for rxn in self.rxnset:
+            for comp in inlet.compset:
+                if comp in rxn.reagents:
+                    stoic_df[comp.name][rxn.name] = rxn.stoic[comp.name]
+                else:
+                    stoic_df[comp.name][rxn.name] = 0
+        stoic_matrix = np.array(stoic_df)
+        '''Reaction orders matrix [No. rxns x No. comps]'''
+        # reaction orders are not used in Reaction.rate() now
         while l < self.length:
             dt = cell_volume / flow.FLVOLPR * 3600  # [s]
             act_C = flow.COMPMOLCPR  # [kgmol/m3]
@@ -391,10 +406,19 @@ class PFRreactor:
             output_line = dict()
             ############################################
             '''matrices!!!'''
+            '''Components concentrations vector [1 x No. comps]'''
+            C_vect = np.array(list(act_C.values()))
+            '''Reactions rate constants matrix [No. rxns x 1]'''
+            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, flow.COMPMOLCPR), self.rxnset)))
+            rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
+
+            term = dt * stoic_matrix * rateconst_matrix
+            compare = (C_vect + term.sum(axis= 0))
             ############################################
             print('\tintegration l = {:.3f} m'.format(l))
             print('\t            t = {:.3f} s'.format(t))
             # one step forward should be printed
+            
             for rxn in self.rxnset:
                 rate = rxn.rate(act_T, flow.COMPMOLCPR)  # [kgmol/(m3*s)]
                 output_line['"{}" rate'.format(rxn.name)] = rate
@@ -414,6 +438,15 @@ class PFRreactor:
             list_T.append(new_T)
             l += dl
             t += dt
+
+            check1 = list([])
+            check2 = list([])
+            for i in range(len(act_C)):
+                check1.append(compare[i] == act_C[comp_keys[i]])
+                check2.append(compare[i] - act_C[comp_keys[i]])
+            print(check1, check2)
+            print(act_C)
+            print(compare)
         temp_df['l'] = list_l
         temp_df['T'] = list_T
         temp_df = temp_df.set_index('l', drop=True)
