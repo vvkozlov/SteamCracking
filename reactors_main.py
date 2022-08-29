@@ -10,7 +10,9 @@ import os
 import rctrs_engine as rctr
 import subprocess as sp
 import reactors_config as cfg
+import time
 
+start_time = time.time()
 print('Initializing calculations...')
 
 '''Setting up reactions'''
@@ -38,6 +40,7 @@ print('Starting calculations...')
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('Calculations completed!')
+print('runtime: {:.2f} ms'.format((time.time() - start_time) * 1000))
 print('\nOutlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
 print('Outlet stream temperature [K]:\n\t', outlet_stream.T)
 print('Outlet stream act. vol. flow [m3/h]:\n\t', outlet_stream.FLVOLPR, '\n')
