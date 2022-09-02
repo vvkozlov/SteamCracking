@@ -22,7 +22,7 @@ axes[0].set_title('Composition, Temperature of Reaction Mixture and Reaction Rat
 axes[0].grid()
 axes[0].set_ylabel('Molar Fraction, [mol. frac.]')
 for param in main_plot_data.columns[1:-1]:
-	if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param:
+	if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param and param != 't':
 		axes[0].plot(main_plot_data['l'], main_plot_data[param], label=param + '-solver', color= 'red', linewidth= 0.5)
 		axes[0].plot(secondary_plot_data['l'], secondary_plot_data[param], label=param + '-hysys',
 					 color= 'blue', linewidth= 0.5, linestyle= '--')
