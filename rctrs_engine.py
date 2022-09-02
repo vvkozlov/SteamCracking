@@ -376,84 +376,84 @@ class PFRreactor:
         :param log: Select if tabular results for each timestep is required
         :return: [Stream] Reactor outlet stream and [pd.DataFrame] Calculations results on each iteration
         '''
+        '''Determine conditions at rctr inlet'''
         flow = inlet
         cell_volume = np.pi * (self.diameter ** 2) / 4 * dl  # [m3]
         l = 0  # [m]
-        list_l = []
-        list_T = []
         t = 0  # [s]
+        '''Df to store calculation results'''
         temp_df = pd.DataFrame()
         '''Keys for components and reactions lists - to make sure that all matrices are uniform'''
         comp_keys = sorted(flow.COMPMOLFR)  # Some more elegant way to create matching list should be found
         rxn_keys = list(map(lambda x: x.name, self.rxnset))
         '''Reaction stoich coefficients matrix [No. rxns x No. comps]'''
-        stoic_df = pd.DataFrame(index = rxn_keys, columns= comp_keys)
+        stoic_df = pd.DataFrame(index= rxn_keys, columns= comp_keys)
+        '''Reaction enthalpy difference dH matrix [No. rxns x 1]'''
+        rxndH_df = pd.DataFrame(index=rxn_keys, columns=['dH'])
+        '''Assemble stoich coeffs and rxn enthalpies df's'''
         for rxn in self.rxnset:
+            rxndH_df['dH'][rxn.name] = rxn.dH
             for comp in inlet.compset:
                 if comp in rxn.reagents:
                     stoic_df[comp.name][rxn.name] = rxn.stoic[comp.name]
                 else:
                     stoic_df[comp.name][rxn.name] = 0
+        '''Convert stoich coeffs and rxn enthalpies df's to matrices'''
         stoic_matrix = np.array(stoic_df)
-        print(stoic_df)
+        rxndH_matrix = np.array(rxndH_df)
         '''Reaction orders matrix [No. rxns x No. comps]'''
         # reaction orders are not used in Reaction.rate() now
-
-        # C_vect = np.array(list(flow.COMPMOLCPR.values()))
+        '''Integration through reactor length'''
         while l < self.length:
+            '''Residence time for finite rctr cell'''
             dt = cell_volume / flow.FLVOLPR * 3600  # [s]
+            print('\tintegration l = {:.3f} m'.format(l + dl))
+            print('\t            t = {:.3f} s'.format(t + dt))
+            '''Determine conditions at cell inlet'''
             act_C = flow.COMPMOLCPR  # [kgmol/m3]
             act_T = flow.T  # [K]
             act_P = flow.P  # [MPa]
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
-            dQ = 0
-            output_line = dict()
-            ############################################
-            '''matrices!!!'''
-            '''Components concentrations vector [1 x No. comps]'''
-
+            '''Comps concentrations vector [1 x No. comps]'''
+            C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
             '''Reactions rate constants matrix [No. rxns x 1]'''
-            C_vect = np.array(list(dict(sorted(act_C.items())).values()))
-            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, flow.COMPMOLCPR), self.rxnset)))
+            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, flow.COMPMOLCPR), self.rxnset)))  # [kgmol/(m3*s)]
             rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
-            term = dt * stoic_matrix * rateconst_matrix
-            C_vect = (C_vect + term.sum(axis= 0))
-            # act_C = dict(zip(comp_keys, C_vect))
-            ############################################
-            print('\tintegration l = {:.3f} m'.format(l))
-            print('\t            t = {:.3f} s'.format(t))
-            # one step forward should be printed
-            for rxn in self.rxnset:
-                rate = rxn.rate(act_T, act_C)  # [kgmol/(m3*s)]
-                output_line['"{}" rate'.format(rxn.name)] = rate
-                dQ += -rxn.dH * 1000 * rate  # [kJ/(m3*s)]
-                for comp in rxn.reagents:
-                    act_C[comp.name] += dt * rxn.stoic[comp.name] * rate  # [s*kgmol/m3/s=kgmol/m3]
+            '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
+            C_vect = (C_vect + (dt * stoic_matrix * rateconst_matrix).sum(axis= 0))  # [kgmol/m3]
+            '''Update comps concentration dictionary'''
+            act_C = dict(zip(comp_keys, C_vect))
+            '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
+            dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
+            '''Heat balance equation for new temperature at cell outlet'''
             new_T = act_T + dt * dQ * 0.008314463 * act_T / act_P / (act_Cp) # [K]
-            dict_keys = list(map(lambda x: x.name, flow.compset))
-            new_compmolfr = dict(zip(dict_keys, list(map(lambda x: act_C[x.name] / sum(act_C.values()), flow.compset))))
-            new_molflow = sum(list(map(lambda x: flow.FLVOLPR * act_C[x.name], flow.compset)))
-            ### UNITS FOR HEAT BALANCE EQUATION?
+            '''Comps mole fractions at cell outlet'''
+            new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
+            '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS)'''
+            new_molflow = sum(list(map(lambda x: flow.FLVOLPR * act_C[x], comp_keys)))  # [kgmol/hr]
+            '''Update flow to cell outlet conditions'''
             flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
-            output_line.update(flow.COMPMOLFR.copy())
-            output_line['FLMOL'] = flow.FLMOL
-            temp_df = temp_df.append(output_line, ignore_index=True)
-            list_l.append(l)
-            list_T.append(new_T)
+            '''Step forward through reactor'''
             l += dl
             t += dt
+            '''Dict to store output variables inside the loop before appending to results dataframe'''
+            output_line = dict()
+            '''Fill output_line'''
+            output_line.update(flow.COMPMOLFR.copy())
+            output_line['FLMOL [kgmol/hr]'] = flow.FLMOL
+            output_line['l [m]'] = l
+            output_line['t [s]'] = t
+            output_line['T [K]'] = new_T
+            '''Add output line as new index to output df'''
+            temp_df = temp_df.append(output_line, ignore_index=True)
+        '''Set lengths column as df indexes for result df'''
+        temp_df = temp_df.set_index('l [m]', drop=True)
 
-            '''check1 = list([])
-            check2 = list([])
-            for i in range(len(act_C)):
-                check1.append(C_vect[i] == act_C[comp_keys[i]])
-                check2.append(C_vect[i] - act_C[comp_keys[i]])
-            print(check1, check2)'''
-            # print(act_C)
-            # print(compare)
-        temp_df['l'] = list_l
-        temp_df['T'] = list_T
-        temp_df = temp_df.set_index('l', drop=True)
+        ''' Possible problems in future:
+        1. matrix indexes may be messed up - check comp_keys and rxn_keys when assigning new non-scalar variables
+        2.
+        '''
+
         return flow, temp_df
 
 
@@ -468,12 +468,12 @@ def plot_results(results: pd.DataFrame):
     axes[0].grid()
     axes[0].set_ylabel('Molar Fraction, [mol. frac.]')
     for param in results.columns[0:-1]:
-        if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param:
+        if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param and param != 't [s]':
             axes[0].plot(results.index, results[param], label= param)
     axes[0].legend()
     axes[1].set_ylabel('Temperature, [K]')
     axes[1].set_xlabel('Length, [m]')
-    axes[1].plot(results.index, results['T'])
+    axes[1].plot(results.index, results['T [K]'])
     plt.grid()
     plt.show()
     return 1
