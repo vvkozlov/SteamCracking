@@ -319,6 +319,11 @@ class Reaction:
         self.dH = dH
         self.k0 = k0
         self.E0 = E0
+        print(self.name)
+        DHFORM_vect = np.array(list(map(lambda x: x.DHFORM, reagents)))
+        dh = np.sum(np.array(stoic) * DHFORM_vect) / 10**6
+        print(self.dH)
+        print(dh)
 
     def rate(self, T: float, conc: dict):
         '''
@@ -337,7 +342,7 @@ class Reaction:
             if self.stoic[comp.name] < 0:
                 mult = mult * ((conc[comp.name]) ** abs(self.stoic[comp.name]))
                 #USE REACTION ORDER INSTEAD OF STOIC COEFFS !?
-        # Needs to be revised!
+        # Needs to be revised (use matrix instead of loop)!
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
         '''
