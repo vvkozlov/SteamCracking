@@ -308,22 +308,20 @@ class Reaction:
         :param reagents: List of all reagents (same order as in equation)
         :param stoic: List of stoichiometric coefficients for listed components (same order as reagents). Negative values
         for reagents (left side of equation), positive for products (right side)
-        :param dH: [kJ/mol] Heat of Reaction (Implemented temporarily before calculation as difference of enthalpies of formation
-        would be introduced)
+        :param dH: [kJ/mol] Heat of Reaction (if equals zero value will be obtained from reagents enthalpy difference)
         :param k0: Reaction Rate Constant (Arrhenius Parameter)
         :param E0: [kJ/mol] Activation Energy
         '''
         self.name = name
         self.reagents = reagents
         self.stoic = dict(zip(list(map(lambda x: x.name, self.reagents)), stoic))
-        self.dH = dH
         self.k0 = k0
         self.E0 = E0
-        print(self.name)
         DHFORM_vect = np.array(list(map(lambda x: x.DHFORM, reagents)))
-        dh = np.sum(np.array(stoic) * DHFORM_vect) / 10**6
-        print(self.dH)
-        print(dh)
+        if dH == 0:
+            self.dH = np.sum(np.array(stoic) * DHFORM_vect) / 10**6
+        else:
+            self.dH = dH
 
     def rate(self, T: float, conc: dict):
         '''
