@@ -19,8 +19,7 @@ SPECIES = Species('NAME', MW [kg/kgmol], [DIPPR107Coefficients x7], DHFORM [J/kg
 '''
 NOCTANE = Species('n-C8H18', 114.232002258301, [32.37317283, 105.8326168, 1635.6, 72.94353683, 746.4, 200, 1500], 0, 2496.6201171875, 295.448022460938, 0.401800006628037)
 ISOOCTANE = Species('i-C8H18', 114.23, [0, 0, 0, 0, 0, 0, 0], 0, 0, 0, 0)
-NBUTANE = Species('C4H10', 58.1240005493164, [0, 0, 0, 0, 0, 0, 0], 0,
-				  3796.6201171875, 152.049005126953, 0.20100000500679)
+NBUTANE = Species('C4H10', 58.1240005493164, [0, 0, 0, 0, 0, 0, 0], 0, 3796.6201171875, 152.049005126953, 0.20100000500679)
 BUTENE1 = Species('C4H8', 56.11, [0, 0, 0, 0, 0, 0, 0], 0, 0, 0, 0)
 EBENZENE = Species('E-Benzene', 106.166000366211, [0, 0, 0, 0, 0, 0, 0], 0, 0, 0, 0)
 STYRENE = Species('Styrene', 104, [0, 0, 0, 0, 0, 0, 0], 0, 0, 0, 0)
@@ -44,6 +43,7 @@ Reactions data and properties database:
 
 Example:
 REACTION = Reaction('NAME', [Species xn], [stoic xn], dH [kJ/mol], k0, E0 [kJ/mol])
+If dH =0, rxn heat will be calculated from reagents enthalpy difference
 '''
 rxn1 = Reaction('Cl2 + Propene --> AllylCl + HCl', [CL2, PROPYLENE, C3H5CL, HCL], [-1, -1, 1, 1], -113.4919251, 1500000, 63.2672)
 rxn2 = Reaction('Cl2 + Propene --> 12-ClC3', [CL2, PROPYLENE, C3H6CL2], [-1, -1, 1], -186.5439605, 90.46, 15.95636)
