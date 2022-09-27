@@ -20,6 +20,11 @@ import math
 import PRBKV_database as binary_db  # move to separate database
 
 
+'''One step integration with Euler method for differential equations'''
+def euler(f, x0, y0, h):
+    return y0 + h * f(x0, y0)
+
+
 class UnitsConverter:
     class Pressure:
         def bara_to_kgfpcm2g(pressure_bara: float):
@@ -408,9 +413,7 @@ class PFRreactor:
         '''Reaction orders matrix [No. rxns x No. comps]'''
         # reaction orders are not used in Reaction.rate() now
 
-        '''One step integration with Euler method for differential equations'''
-        def euler(f, x0, y0, h):
-            return y0 + h * f(x0, y0)
+
 
         '''Integration through reactor length'''
         while l < self.length:
@@ -425,64 +428,32 @@ class PFRreactor:
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
             '''Comps concentrations vector [1 x No. comps]'''
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
-            C_vect1 = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
-            C_vect2 = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
-            '''Reactions rate constants matrix [No. rxns x 1]'''
-            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, flow.COMPMOLCPR), self.rxnset)))  # [kgmol/(m3*s)]
-            rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
 
-            '''Functional form of PFReactor differential equation for integration methods'''
-            def pfr_diff_eq(x, y):
+            '''Functional form of PFReactor mass balance differential equation for integration methods'''
+            def concentrations_derivative(x, y, _stoic_matrix= stoic_matrix, _rxnset= self.rxnset, _T= act_T):
                 x = 1
-                return (stoic_matrix * y).sum(axis= 0)
-
-            ##########
-            '''C_vect - initial method
-               C_vect1 - experiments with Runge-Kutta 'dirty' method
-               C_vect2 - experiments with functional representation of differential equations'''
-            ##########
+                '''Reactions rate constants matrix [No. rxns x 1]'''
+                _rateconst_matrix = np.array(list(map(lambda x: x.rate(_T, dict(zip(comp_keys, y))), _rxnset)))  # [kgmol/(m3*s)]
+                _rateconst_matrix = np.reshape(_rateconst_matrix, (len(_rateconst_matrix), 1))
+                return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
 
             '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
-            C_vect = (C_vect + (dt * stoic_matrix * rateconst_matrix).sum(axis= 0))  # [kgmol/m3]
-            C_vect2 = euler(pfr_diff_eq, t, C_vect2, dt)
-            print('C_vect =', C_vect)
-            print('C_vect2 =', C_vect2)
-
-            ##########
-            k1 = (stoic_matrix * rateconst_matrix).sum(axis= 0)
-            rateconst_matrix1 = np.array(list(map(lambda x: x.rate(act_T, dict(zip(comp_keys, C_vect1 + dt / 2 * k1))), self.rxnset)))  # [kgmol/(m3*s)]
-            rateconst_matrix1 = np.reshape(rateconst_matrix1, (len(rateconst_matrix1), 1))
-            k2 = (stoic_matrix * rateconst_matrix1).sum(axis= 0)
-            rateconst_matrix2 = np.array(list(map(lambda x: x.rate(act_T, dict(zip(comp_keys, C_vect1 + dt / 2 * k2))), self.rxnset)))  # [kgmol/(m3*s)]
-            rateconst_matrix2 = np.reshape(rateconst_matrix2, (len(rateconst_matrix2), 1))
-            k3 = (stoic_matrix * rateconst_matrix2).sum(axis= 0)
-            rateconst_matrix3 = np.array(list(map(lambda x: x.rate(act_T, dict(zip(comp_keys, C_vect1 + dt * k3))), self.rxnset)))  # [kgmol/(m3*s)]
-            rateconst_matrix3 = np.reshape(rateconst_matrix3, (len(rateconst_matrix3), 1))
-            k4 = (stoic_matrix * rateconst_matrix3).sum(axis= 0)
-            C_vect1 = C_vect1 + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-
-            # print('C_vect=', C_vect)
-            # print('C_vect1=', C_vect1)
-            ##########
-
+            C_vect = euler(concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
             '''Update comps concentration dictionary'''
-            act_C = dict(zip(comp_keys, C_vect1))
+            act_C = dict(zip(comp_keys, C_vect))
+            '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
+            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, dict(zip(comp_keys, C_vect))), self.rxnset)))  # [kgmol/(m3*s)]
+            rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
             '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
             dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
-            '''Heat balance equation for new temperature at cell outlet'''
-            new_T = act_T + dt * dQ * 0.008314463 * act_T / act_P / (act_Cp) # [K]
 
-            ##########
-            k1 = dQ * 0.008314463 * act_T / act_P / (act_Cp)
-            k2 = dQ * 0.008314463 * (act_T + dt / 2 * k1) / act_P / (act_Cp)
-            k3 = dQ * 0.008314463 * (act_T + dt / 2 * k2) / act_P / (act_Cp)
-            k4 = dQ * 0.008314463 * (act_T + dt * k3) / act_P / (act_Cp)
-            new_T1 = act_T + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+            '''Functional form of PFReactor heat balance differential equation for integration methods'''
+            def temperature_derivative(x, y, _dQ= dQ, _P= act_P, _Cp= act_Cp):
+                x = 1
+                return _dQ * 0.008314463 * y / _P / _Cp
 
-            print('new_T=', new_T)
-            print('new_T1=', new_T1)
-            ##########
-
+            '''Update cell temperature'''
+            new_T = euler(temperature_derivative, 1, act_T, dt)
             '''Comps mole fractions at cell outlet'''
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS)'''
