@@ -21,8 +21,28 @@ import PRBKV_database as binary_db  # move to separate database
 
 
 '''One step integration with Euler method for differential equations'''
-def euler(f, x0, y0, h):
+def increment_euler(f, x0, y0, h):
     return y0 + h * f(x0, y0)
+
+
+'''One step integration with 4th order Runge-Kutta method for differential equations'''
+def increment_rungekutta4th(f, x0, y0, h):
+    k1 = f(x0, y0)
+    k2 = f(x0 + h / 2, y0 + k1 * h / 2)
+    k3 = f(x0 + h / 2, y0 + k2 * h / 2)
+    k4 = f(x0 + h, y0 + k3 * h)
+    return y0 + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+
+'''One step integration with 5th order Runge-Kutta-Felberg method for differential equations'''
+def increment_rungekuttafelberg5th(f, x0, y0, h):
+    k1 = h * f(x0,                  y0)
+    k2 = h * f(x0 + 1 / 4 * h,      y0 + 1 / 4 * k1)
+    k3 = h * f(x0 + 3 / 8 * h,      y0 + 3 / 32 * k1 + 9 / 32 * k2)
+    k4 = h * f(x0 + 12 / 13 * h,    y0 + 1932 / 2197 * k1 - 7200 / 2197 * k2 + 7296 / 2197 * k3)
+    k5 = h * f(x0 + h,              y0 + 439 / 216 * k1 - 8 * k2 + 3680 / 513 * k3 - 845 / 4104 * k4)
+    k6 = h * f(x0 + 1 / 2 * h,      y0 - 8 / 27 * k1 + 2 * k2 - 3544 / 2565 * k3 + 1859 / 4104 * k4 - 11 / 40 * k5)
+    return y0 + 16 / 135 * k1 + 6656 / 12825 * k3 + 28561 / 56430 * k4 - 9 / 50 * k5 + 2 / 55 * k6
 
 
 class UnitsConverter:
@@ -428,8 +448,11 @@ class PFRreactor:
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
             '''Comps concentrations vector [1 x No. comps]'''
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
+            # C_vect1 = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
+            # C_vect2 = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
 
             '''Functional form of PFReactor mass balance differential equation for integration methods'''
+            a = self.rxnset
             def concentrations_derivative(x, y, _stoic_matrix= stoic_matrix, _rxnset= self.rxnset, _T= act_T):
                 x = 1
                 '''Reactions rate constants matrix [No. rxns x 1]'''
@@ -438,11 +461,16 @@ class PFRreactor:
                 return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
 
             '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
-            C_vect = euler(concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
+            C_vect = increment_euler(concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
+            # print('C - euler = ', C_vect)
+            # C_vect1 = increment_rungekutta4th(concentrations_derivative, 1, C_vect1, dt)
+            # print('C - rungekutta = ', C_vect1)
+            # C_vect2 = increment_rungekuttafelberg5th(concentrations_derivative, 1, C_vect2, dt)
+            # print('C - rungekuttafelberg = ', C_vect2)
             '''Update comps concentration dictionary'''
             act_C = dict(zip(comp_keys, C_vect))
             '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
-            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, dict(zip(comp_keys, C_vect))), self.rxnset)))  # [kgmol/(m3*s)]
+            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C), self.rxnset)))  # [kgmol/(m3*s)]
             rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
             '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
             dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
@@ -453,7 +481,12 @@ class PFRreactor:
                 return _dQ * 0.008314463 * y / _P / _Cp
 
             '''Update cell temperature'''
-            new_T = euler(temperature_derivative, 1, act_T, dt)
+            new_T = increment_euler(temperature_derivative, 1, act_T, dt)
+            # print('T - euler = ', new_T)
+            # new_T1 = increment_rungekutta4th(temperature_derivative, 1, act_T, dt)
+            # print('T - rungekutta = ', new_T1)
+            # new_T2 = increment_rungekuttafelberg5th(temperature_derivative, 1, act_T, dt)
+            # print('T - rungekuttafelberg = ', new_T2)
             '''Comps mole fractions at cell outlet'''
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS)'''
