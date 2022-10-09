@@ -17,6 +17,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import math
+import sys
 import PRBKV_database as binary_db  # move to separate database
 
 
@@ -129,9 +130,9 @@ class Species:
         if C6 <= T <= C7:
             CPIG = 4.1868 *(C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
         else:
-            # print('ERROR! DIPPR Equation 107 heat capacity correlation is not suitable for specified temperature')
-            # sys.exit()
-            CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
+            print('ERROR! DIPPR Equation 107 heat capacity correlation is not suitable for specified temperature')
+            sys.exit()
+            #CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
         return CPIG
 
     def HIGV(self, T: float, numsteps= 10000):
@@ -200,7 +201,7 @@ class Stream:
 
         '''[J/(mol*K)] Stream ideal gas heat capacity at constant pressure'''
         self.CPIG = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.CPIG(T), self.compset)))
-        # Check convergence with Hysys!
+        # Check convergence with Hysys! - It does not converge with Hysys.
 
         '''[kg/hr] Stream mass flow'''
         self.FLMASS = sum(list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] * x.MW, self.compset)))
@@ -434,7 +435,6 @@ class PFRreactor:
         # reaction orders are not used in Reaction.rate() now
 
 
-
         '''Integration through reactor length'''
         while l < self.length:
             '''Residence time for finite rctr cell'''
@@ -448,8 +448,6 @@ class PFRreactor:
             act_Cp = flow.CPIG  # [kJ/(kg*K)]
             '''Comps concentrations vector [1 x No. comps]'''
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
-            # C_vect1 = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
-            # C_vect2 = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
 
             '''Functional form of PFReactor mass balance differential equation for integration methods'''
             a = self.rxnset
@@ -481,9 +479,6 @@ class PFRreactor:
             new_molflow = sum(list(map(lambda x: flow.FLVOLPR * act_C[x], comp_keys)))  # [kgmol/hr]
             '''Update flow to cell outlet conditions'''
             flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
-            print('cell volume = ', cell_volume)
-            print('eos volume = ', flow.FLVOLPR / 3600 * dt)
-            print('rfom concentrations volume = ', flow.FLINDMOL['Ethane'] / 3600 * dt / flow.COMPMOLCPR['Ethane'])
             '''Step forward through reactor'''
             l += dl
             t += dt
