@@ -328,12 +328,14 @@ class Reaction:
     .rate(T: float)
         Calculates Reaction Rate at specified temperature with Arrhenius Law
     '''
-    def __init__(self, name: str, reagents: list[Species], stoic: list[float], dH: float, k0: float, E0: float):
+    def __init__(self, name: str, reagents: list[Species], stoic: list[float], order: list[float], dH: float, k0: float, E0: float):
         '''
         :param name: Reaction Name
         :param reagents: List of all reagents (same order as in equation)
-        :param stoic: List of stoichiometric coefficients for listed components (same order as reagents). Negative values
-        for reagents (left side of equation), positive for products (right side)
+        :param stoic: List of stoichiometric coefficients for listed components (written in same order as reagents).
+        Negative values for reagents (left side of equation), positive for products (right side)
+        :param order: List of reaction orders by each reactant for listed components (written in same order as reagents).
+        Negative values for reagents (left side of equation), positive for products (right side)
         :param dH: [kJ/mol] Heat of Reaction (if equals zero value will be obtained from reagents enthalpy difference)
         :param k0: Reaction Rate Constant (Arrhenius Parameter)
         :param E0: [kJ/mol] Activation Energy
@@ -341,6 +343,7 @@ class Reaction:
         self.name = name
         self.reagents = reagents
         self.stoic = dict(zip(list(map(lambda x: x.name, self.reagents)), stoic))
+        self.order = dict(zip(list(map(lambda x: x.name, self.reagents)), order))
         self.k0 = k0
         self.E0 = E0
 
@@ -352,7 +355,7 @@ class Reaction:
 
     def rate(self, T: float, conc: dict):
         '''
-        Returns Reaction Rate at specified temperature
+        Returns Reaction Rate for forward rxns at specified temperature
 
         :param T: [K] Temperature
         :param conc: [kmol/m3] Concentrations of components
@@ -364,9 +367,8 @@ class Reaction:
         '''
         mult = 1  # [kgkol/m3]^n Multiplier that considers contribution of concentrations
         for comp in self.reagents:
-            if self.stoic[comp.name] < 0:
-                mult = mult * ((conc[comp.name]) ** abs(self.stoic[comp.name]))
-                #USE REACTION ORDER INSTEAD OF STOIC COEFFS !?
+            if self.order[comp.name] < 0:
+                mult = mult * ((conc[comp.name]) ** abs(self.order[comp.name]))
         # Needs to be revised (use matrix instead of loop)!
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
@@ -418,6 +420,8 @@ class PFRreactor:
         rxn_keys = list(map(lambda x: x.name, self.rxnset))
         '''Reaction stoich coefficients matrix [No. rxns x No. comps]'''
         stoic_df = pd.DataFrame(index= rxn_keys, columns= comp_keys)
+        '''Reaction order matrix [No. rxns x No. comps]'''
+        order_df = pd.DataFrame(index=rxn_keys, columns=comp_keys)
         '''Reaction enthalpy difference dH matrix [No. rxns x 1]'''
         rxndH_df = pd.DataFrame(index=rxn_keys, columns=['dH'])
         '''Assemble stoich coeffs and rxn enthalpies df's'''
@@ -431,9 +435,6 @@ class PFRreactor:
         '''Convert stoich coeffs and rxn enthalpies df's to matrices'''
         stoic_matrix = np.array(stoic_df)
         rxndH_matrix = np.array(rxndH_df)
-        '''Reaction orders matrix [No. rxns x No. comps]'''
-        # reaction orders are not used in Reaction.rate() now
-
 
         '''Integration through reactor length'''
         while l < self.length:
@@ -450,7 +451,6 @@ class PFRreactor:
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
 
             '''Functional form of PFReactor mass balance differential equation for integration methods'''
-            a = self.rxnset
             def concentrations_derivative(x, y, _stoic_matrix= stoic_matrix, _rxnset= self.rxnset, _T= act_T):
                 x = 1
                 '''Reactions rate constants matrix [No. rxns x 1]'''
