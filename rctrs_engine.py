@@ -459,40 +459,31 @@ class PFRreactor:
                 _rateconst_matrix = np.array(list(map(lambda x: x.rate(_T, dict(zip(comp_keys, y))), _rxnset)))  # [kgmol/(m3*s)]
                 _rateconst_matrix = np.reshape(_rateconst_matrix, (len(_rateconst_matrix), 1))
                 return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
-
             '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
-            C_vect = increment_euler(concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
-            # print('C - euler = ', C_vect)
-            # C_vect1 = increment_rungekutta4th(concentrations_derivative, 1, C_vect1, dt)
-            # print('C - rungekutta = ', C_vect1)
-            # C_vect2 = increment_rungekuttafelberg5th(concentrations_derivative, 1, C_vect2, dt)
-            # print('C - rungekuttafelberg = ', C_vect2)
+            C_vect = increment_rungekutta4th(concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
             '''Update comps concentration dictionary'''
             act_C = dict(zip(comp_keys, C_vect))
+
             '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
             rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C), self.rxnset)))  # [kgmol/(m3*s)]
             rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
             '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
             dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
-
             '''Functional form of PFReactor heat balance differential equation for integration methods'''
             def temperature_derivative(x, y, _dQ= dQ, _P= act_P, _Cp= act_Cp):
                 x = 1
                 return _dQ * 0.008314463 * y / _P / _Cp
-
             '''Update cell temperature'''
-            new_T = increment_euler(temperature_derivative, 1, act_T, dt)
-            # print('T - euler = ', new_T)
-            # new_T1 = increment_rungekutta4th(temperature_derivative, 1, act_T, dt)
-            # print('T - rungekutta = ', new_T1)
-            # new_T2 = increment_rungekuttafelberg5th(temperature_derivative, 1, act_T, dt)
-            # print('T - rungekuttafelberg = ', new_T2)
+            new_T = increment_rungekutta4th(temperature_derivative, 1, act_T, dt)
             '''Comps mole fractions at cell outlet'''
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
-            '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS)'''
+            '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''
             new_molflow = sum(list(map(lambda x: flow.FLVOLPR * act_C[x], comp_keys)))  # [kgmol/hr]
             '''Update flow to cell outlet conditions'''
             flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
+            print('cell volume = ', cell_volume)
+            print('eos volume = ', flow.FLVOLPR / 3600 * dt)
+            print('rfom concentrations volume = ', flow.FLINDMOL['Ethane'] / 3600 * dt / flow.COMPMOLCPR['Ethane'])
             '''Step forward through reactor'''
             l += dl
             t += dt
