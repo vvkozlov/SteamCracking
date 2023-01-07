@@ -90,10 +90,12 @@ class Species:
     .HIGV(T: float)
         Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
-    def __init__(self, name: str, MW: float, CPIGDP: list[float], DHFORM: float, PC: float, TC: float,
-                 OMEGA: float):
+    def __init__(self, ID: int, name: str, formula: str, MW: float, CPIGDP: list[float], DHFORM: float,
+                 PC: float, TC: float, OMEGA: float):
         '''
+        :param ID: Species ID
         :param name: Species Name
+        :param: formula: Species Formula
         :param MW: [g/mol] Molar Weight
         :param CPIGDP: [K, cal/mol] Coefficients for DIPPR Equation 107
         :param DHFORM: [J/kgmol] Pure Component Ideal Gas Enthalpy of Formation @ 25 degC
@@ -101,7 +103,9 @@ class Species:
         :param TC: [C] Critical Pressure
         :param OMEGA: [dmls.] Pitzer Acentric Factor
         '''
+        self.ID = ID
         self.name = name
+        self.formula = formula
         self.MW = MW
         self.CPIGDP = CPIGDP
         self.DHFORM = DHFORM
@@ -149,6 +153,7 @@ class Species:
         dH_vector = np.array(list(map(lambda x: dT * self.CPIG(x), T_vector)))
         H = self.DHFORM + dH_vector.sum() * 1000
         # Reduce computing time!
+        # Use Barin Equation for Entahlpy (in HYSYS: Component --> TDep)
         return H
 
 
