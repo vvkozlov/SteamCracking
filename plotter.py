@@ -12,9 +12,10 @@ import pandas as pd
 
 
 main_plot_filename = 'log.csv'
-secondary_plot_filename = 'log_hysys_dante.csv'
+secondary_plot_filename = 'log_hysys_dante_1000_steps.csv' #'log_solver_runge-kutta-1e-2.csv'
 
 main_plot_data = pd.read_csv(main_plot_filename)
+# secondary_plot_data = pd.read_csv(secondary_plot_filename)
 secondary_plot_data = pd.read_csv(secondary_plot_filename, sep= ';')
 
 fig, axes = plt.subplots(3, 1)
@@ -27,7 +28,7 @@ for param in main_plot_data.columns[1:-1]:
 		axes[0].plot(secondary_plot_data['l [m]'], secondary_plot_data[param], label=param + '-hysys',
 					 color= 'blue', linewidth= 0.5, linestyle= '--')
 
-axes[0].legend()
+# axes[0].legend()
 axes[1].set_ylabel('Temperature, [K]')
 axes[1].set_xlabel('Length, [m]')
 axes[1].grid()
