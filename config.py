@@ -1,5 +1,5 @@
 '''
-Header      : reactors_config.py
+Header      : config.py
 Created     : 08.08.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : Contains all input data to simulate Plug-Flow Reactor. Added to get an opportunity to change

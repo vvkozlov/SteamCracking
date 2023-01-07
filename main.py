@@ -1,5 +1,5 @@
 '''
-Header      : reactors_main.py
+Header      : main.py
 Created     : 22.06.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolidate all scripts together.
@@ -9,7 +9,7 @@ Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolida
 import os
 import chemistry as rctr
 import subprocess as sp
-import reactors_config as cfg
+import config as cfg
 import time
 
 start_time = time.time()
