@@ -8,6 +8,8 @@ References:
         [1] A. Jebarjadi - Multi-Phase Multi-Component Equilibrium Flash Calculations for CompFlow Bio using
             Modified Volume-Translated Peng-Robinson EOS (2017)'
         [2] M. Abramowitz - Handbook of Mathematical Functions with Formulas, Graphs and Matematical Tables
+        [3] M. Dente - Detailed Prediction of Olefin Yields from Hydrocarbon Pyrolysis Through a Fundamental
+            Simulation Model (Spyro), 1979
 
 '''
 
@@ -90,14 +92,17 @@ class Species:
     .HIGV(T: float)
         Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
-    def __init__(self, ID: int, name: str, formula: str, MW: float, CPIGDP: list[float], DHFORM: float,
+    def __init__(self, ID: int, name: str, formula: str, MW: float, CPIGoption: int, CPIGcoeffs: list[float], DHFORM: float,
                  PC: float, TC: float, OMEGA: float):
         '''
         :param ID: Species ID
         :param name: Species Name
         :param: formula: Species Formula
         :param MW: [g/mol] Molar Weight
-        :param CPIGDP: [K, cal/mol] Coefficients for DIPPR Equation 107
+        :param CPIGoption: Method for CPIG calculation
+            1 - DIPPR Equation 107 Heat Capacity Correlation
+            2 - Mayer-Kelly Heat Capacity Equation
+        :param CPIGcoeffs: Coefficients for Heat Capacity equation (list of 7 coeffs)
         :param DHFORM: [J/kgmol] Pure Component Ideal Gas Enthalpy of Formation @ 25 degC
         :param PC: [kPa] Critical Pressure
         :param TC: [C] Critical Pressure
@@ -107,7 +112,8 @@ class Species:
         self.name = name
         self.formula = formula
         self.MW = MW
-        self.CPIGDP = CPIGDP
+        self.CPIGoption = CPIGoption
+        self.CPIGcoeffs = CPIGcoeffs
         self.DHFORM = DHFORM
         self.PC = PC
         self.TC = TC
@@ -115,28 +121,41 @@ class Species:
 
     def CPIG(self, T: float):
         '''
-        Returns Specific Heat Capacity [J/(mol*K)] of pure component at specified Temperature calculated with
-        DIPPR Equation 107 Heat Capacity correlation
+        Returns Specific Heat Capacity [J/(mol*K)] of pure component at specified Temperature.
+        Two options for calculation are available and must be specified in CPIGoption variable:
+            - 1 - DIPPR Equation 107 Heat Capacity Correlation
+                coefficients list format: [C1, C2, C3, C4, C5, C6, C7];
+            - 2 - Mayer-Kelly Heat Capacity Equation
+                coefficients list format: [a, b, c, d, 0, 0, 0]
+                WARNING: from available database applicability limits are not known;
 
         :param T: [K] Temperature
         :return: [J/(mol*K)] Specific Heat Capacity
+        '''
+        CPIG = -1  # Initial value (negative to track malfunctions)
+        if self.CPIGoption == 1:
+            C1 = self.CPIGcoeffs[0]
+            C2 = self.CPIGcoeffs[1]
+            C3 = self.CPIGcoeffs[2]
+            C4 = self.CPIGcoeffs[3]
+            C5 = self.CPIGcoeffs[4]
+            C6 = self.CPIGcoeffs[5]
+            C7 = self.CPIGcoeffs[6]
+            if C6 <= T <= C7:
+                CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
+            else:
+                print('ERROR! DIPPR Equation 107 heat capacity correlation is not suitable for specified temperature')
+                sys.exit()
+                #CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
 
-        previously used fourth-order equation:
-        4.1887 * (self.Cp_coeffs[0] + self.Cp_coeffs[1] * T
-                         + self.Cp_coeffs[2] * T ** 2 + self.Cp_coeffs[3] * T ** 3) '''
-        C1 = self.CPIGDP[0]
-        C2 = self.CPIGDP[1]
-        C3 = self.CPIGDP[2]
-        C4 = self.CPIGDP[3]
-        C5 = self.CPIGDP[4]
-        C6 = self.CPIGDP[5]
-        C7 = self.CPIGDP[6]
-        if C6 <= T <= C7:
-            CPIG = 4.1868 *(C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
+        elif self.CPIGoption == 2:
+            a = self.CPIGcoeffs[0]
+            b = self.CPIGcoeffs[1]
+            c = self.CPIGcoeffs[2]
+            d = self.CPIGcoeffs[3]
+            CPIG = 4.1868 * (a + b * T + c / T ^ 2 + d * T ^ 2)
         else:
-            print('ERROR! DIPPR Equation 107 heat capacity correlation is not suitable for specified temperature')
-            sys.exit()
-            #CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
+            print('ERROR! Selected Heat Capacity calculation method for component {} is not available'.format(self.name))
         return CPIG
 
     def HIGV(self, T: float, numsteps= 10000):
@@ -378,7 +397,10 @@ class Reaction:
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
         '''
-        from Dante, 1979 k0 reported in [l / (mol * s)] --> for second-oreder reactions rate is in [kgmol/(m3*s)]
+        - from Dente, 1979 k0 reported in [l/(mol*s)] --> for second-order reactions rate is in [kgmol/(m3*s)]
+        - from Terrasug-2000 k0 reported in [ml/(mol*s)] --> for second-order reactions rate is in 0.001 * [kgmol/(m3*s)]
+            so in rxn data input used 10^A * 0.001 thus converting to [l/(mol*s)]
+        - if does not work - try use k0 in [l/(mol*s)] same as per Dente, 1979 because modules are to close
         '''
         return rate
 
