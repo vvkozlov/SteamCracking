@@ -6,8 +6,8 @@ Description : Storage of component's properties and reaction's parameters.
 '''
 import pandas as pd
 
-from rctrs_engine import Species
-from rctrs_engine import Reaction
+from coreobjects import Species
+from chemistry import Reaction
 
 '''
 Pure components properties database:
