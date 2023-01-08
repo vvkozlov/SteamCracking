@@ -10,6 +10,7 @@ import os
 import chemistry as rctr
 import subprocess as sp
 import config as cfg
+import plotter as pl
 import time
 
 start_time = time.time()
@@ -34,7 +35,7 @@ tubes_No = cfg.tubes_No  # Reaction tubes number
 inlet_stream = rctr.Stream(rctr_compset, comp_x0, molflow, P, T0)
 
 '''Creating Reactor model'''
-cstreactor = rctr.PFRreactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
+cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
 print('Starting calculations...')
 
 '''Integrating through PFReactor model'''
@@ -59,7 +60,7 @@ calc_hist.to_csv(filename)
 
 '''Plotting diagrams in matplotlib'''
 print('Plotting graphs...')
-rctr.plot_results(calc_hist)
+pl.plot_results(calc_hist)
 
 '''Done)'''
 print('done')

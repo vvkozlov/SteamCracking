@@ -85,7 +85,7 @@ class Reaction:
         return rate
 
 
-class PFRreactor:
+class PFReactor:
     '''
     Describes adiabatic Plug-Flow Reactor
 
@@ -208,28 +208,3 @@ class PFRreactor:
         '''
 
         return flow, temp_df
-
-
-def plot_results(results: pd.DataFrame):
-    '''
-    Plots results of reactor simulation. Input DataFrame must be in format defined in ReactorModel.Simulation
-
-    :param results: Tabular results of ReactorModel.Simulation
-    '''
-    fig, axes = plt.subplots(2, 1)
-    axes[0].set_title('Composition and Temperature of Reaction Mixture vs. Time')
-    axes[0].grid()
-    axes[0].set_ylabel('Molar Fraction, [mol. frac.]')
-    for param in results.columns[0:-1]:
-        if 'rate' not in param and 'FLMASS' not in param and 'FLMOL' not in param and param != 't [s]':
-            axes[0].plot(results.index, results[param], label= param)
-    axes[0].legend()
-    axes[1].set_ylabel('Temperature, [K]')
-    axes[1].set_xlabel('Length, [m]')
-    axes[1].plot(results.index, results['T [K]'])
-    plt.grid()
-    plt.show()
-    return 1
-
-
-
