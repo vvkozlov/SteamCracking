@@ -32,6 +32,7 @@ def plot_results(results: pd.DataFrame):
 
 
 ### WARNING! Needs to be wrapped into function
+"""
 main_plot_filename = 'log.csv'
 secondary_plot_filename = 'log_hysys_dante_1000_steps.csv' #'log_solver_runge-kutta-1e-2.csv'
 
@@ -65,3 +66,4 @@ axes[2].legend()
 
 plt.grid()
 plt.show()
+"""
