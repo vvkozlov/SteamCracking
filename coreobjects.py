@@ -24,7 +24,7 @@ class Species:
     .HIGV(T: float)
         Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
-    def __init__(self, ID: int, name: str, formula: str, MW: float, CPIGoption: str, CPIGcoeffs: list[float], DHFORM: float,
+    def __init__(self, ID: int, name: str, formula: str, MW: float, CPIGoption: int, CPIGcoeffs: list[float], DHFORM: float,
                  PC: float, TC: float, OMEGA: float):
         '''
         :param ID: Species ID
@@ -55,9 +55,9 @@ class Species:
         '''
         Returns Specific Heat Capacity [J/(mol*K)] of pure component at specified Temperature.
         Two options for calculation are available and must be specified in CPIGoption variable:
-            - 'DIPPR eq 107' - DIPPR Equation 107 Heat Capacity Correlation
+            - 1 - DIPPR Equation 107 Heat Capacity Correlation
                 coefficients list format: [C1, C2, C3, C4, C5, C6, C7];
-            - 'Mayer-Kelly' - Mayer-Kelly Heat Capacity Equation
+            - 2 - Mayer-Kelly Heat Capacity Equation
                 coefficients list format: [a, b, c, d, 0, 0, 0]
                 WARNING: from available database applicability limits are not known;
 
@@ -65,7 +65,7 @@ class Species:
         :return: [J/(mol*K)] Specific Heat Capacity
         '''
         CPIG = -1  # Initial value (negative to track malfunctions)
-        if self.CPIGoption == 'DIPPR eq 107':
+        if self.CPIGoption == 1:
             C1 = self.CPIGcoeffs[0]
             C2 = self.CPIGcoeffs[1]
             C3 = self.CPIGcoeffs[2]
@@ -80,7 +80,7 @@ class Species:
                 sys.exit()
                 #CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
 
-        elif self.CPIGoption == 'Mayer-Kelly':
+        elif self.CPIGoption == 2:
             a = self.CPIGcoeffs[0]
             b = self.CPIGcoeffs[1]
             c = self.CPIGcoeffs[2]
