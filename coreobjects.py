@@ -85,7 +85,7 @@ class Species:
             b = self.CPIGcoeffs[1]
             c = self.CPIGcoeffs[2]
             d = self.CPIGcoeffs[3]
-            CPIG = 4.1868 * (a + b * T + c / T ^ 2 + d * T ^ 2)
+            CPIG = 4.1868 * (a + b * T + c / T**2 + d * T**2)
         else:
             print('ERROR! Selected Heat Capacity calculation method for component {} is not available'.format(self.name))
         return CPIG
