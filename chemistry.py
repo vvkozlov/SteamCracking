@@ -1,4 +1,4 @@
-'''
+"""
 Header      : chemistry.py (former rctr_engine.py)
 Created     : 09.07.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
@@ -10,28 +10,30 @@ References:
         [2] M. Abramowitz - Handbook of Mathematical Functions with Formulas, Graphs and Matematical Tables
         [3] M. Dente - Detailed Prediction of Olefin Yields from Hydrocarbon Pyrolysis Through a Fundamental
             Simulation Model (Spyro), 1979
+        [4] Terrasug-2000 User Manual
+        [5] Aspen HYSYS User Manual
 
-'''
+"""
 
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from coreobjects import Species, Stream
-from usermath import increment_rungekutta4th  # WARNING! Refactor to class
+import usermath as m
 
 
 class Reaction:
-    '''
+    """
     Describes kinetic reactions
 
     Methods
     ----------
     .rate(T: float)
         Calculates Reaction Rate at specified temperature with Arrhenius Law
-    '''
+    """
     def __init__(self, name: str, reagents: list[Species], stoic: list[float], order: list[float], dH: float, k0: float, E0: float):
-        '''
+        """
         :param name: Reaction Name
         :param reagents: List of all reagents (same order as in equation)
         :param stoic: List of stoichiometric coefficients for listed components (written in same order as reagents).
@@ -41,7 +43,7 @@ class Reaction:
         :param dH: [kJ/mol] Heat of Reaction (if equals zero value will be obtained from reagents enthalpy difference)
         :param k0: Reaction Rate Constant (Arrhenius Parameter)
         :param E0: [kJ/mol] Activation Energy
-        '''
+        """
         self.name = name
         self.reagents = reagents
         self.stoic = dict(zip(list(map(lambda x: x.name, self.reagents)), stoic))
@@ -163,7 +165,7 @@ class PFRreactor:
                 _rateconst_matrix = np.reshape(_rateconst_matrix, (len(_rateconst_matrix), 1))
                 return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
             '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
-            C_vect = increment_rungekutta4th(concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
+            C_vect = m.integrate('rungekutta4th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
             '''Update comps concentration dictionary'''
             act_C = dict(zip(comp_keys, C_vect))
 
@@ -177,7 +179,7 @@ class PFRreactor:
                 x = 1
                 return _dQ * 0.008314463 * y / _P / _Cp
             '''Update cell temperature'''
-            new_T = increment_rungekutta4th(temperature_derivative, 1, act_T, dt)
+            new_T = m.integrate('rungekutta4th', temperature_derivative, 1, act_T, dt)
             '''Comps mole fractions at cell outlet'''
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''

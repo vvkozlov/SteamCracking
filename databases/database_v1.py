@@ -1,5 +1,5 @@
 '''
-Header      : database_v2.py
+Header      : database_v1.py
 Created     : 02.08.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : Storage of component's properties and reaction's parameters.
