@@ -87,7 +87,8 @@ class Species:
             d = self.CPIGcoeffs[3]
             CPIG = 4.1868 * (a + b * T + c / T**2 + d * T**2)
         else:
-            print('ERROR! Selected Heat Capacity calculation method for component {} is not available'.format(self.name))
+            print('ERROR! Selected Heat Capacity calculation method for component {} is not available. Specify valid'
+              'heat capacity method or check spelling'.format(self.name))
         return CPIG
 
     def HIGV(self, T: float, numsteps= 10000):
