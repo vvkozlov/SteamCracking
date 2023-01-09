@@ -39,7 +39,7 @@ cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
 print('Starting calculations...')
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
+outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, 'PENG-ROB', True)
 print('Calculations completed!')
 print('runtime: {:.2f} ms'.format((time.time() - start_time) * 1000))
 print('\nOutlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
