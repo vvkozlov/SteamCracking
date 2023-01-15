@@ -135,16 +135,21 @@ class Stream:
         '''
         self.compset = compset
         comp_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
-        if len(x) < len(comp_keys):
-            x_dict = dict()
-            for comp in comp_keys:
-                if comp in x.keys():
-                    x_dict[comp] = x[comp]
-                else:
-                    x_dict[comp] = 0
-            self.COMPMOLFR = x_dict
+        if sum(x.values()) == 1:
+            if len(x) < len(comp_keys):
+                x_dict = dict()
+                for comp in comp_keys:
+                    if comp in x.keys():
+                        x_dict[comp] = x[comp]
+                    else:
+                        x_dict[comp] = 0
+                self.COMPMOLFR = x_dict
+            else:
+                self.COMPMOLFR = x
         else:
-            self.COMPMOLFR = x
+            print('ERROR! Components concentrations for stream #PLACEYORSTREAMNAMEHERE# are not entered correctly '
+                  '(sum <>1). Check concentrations input')
+            sys.exit()
         self.FLMOL = molflow
         self.P = P
         self.T = T
