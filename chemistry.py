@@ -107,15 +107,13 @@ class PFReactor:
         self.rxnset = rxnset
 
     # without matrices 1863.49 ms
-    def simulation(self, inlet: Stream, dl: float, eos_option: str, log: bool) -> tuple[Stream, pd.DataFrame]:
+    def simulation(self, inlet: Stream, dl: float, log: bool) -> tuple[Stream, pd.DataFrame]:
         '''
         Performs  integration along reactor length with Euler method for reactions listed
 
         :param inlet: [Stream] Reactor inlet stream
         :param step: [m] Integration resolution (step along reactor length)
-        :param eos_option: Allows to select desired equation of state for VLE calculations. Available options:
-            - 'IG'
-            - 'PENG-ROB'
+
         :param log: Select if tabular results for each timestep is required
         :return: [Stream] Reactor outlet stream and [pd.DataFrame] Calculations results on each iteration
         '''
@@ -150,15 +148,9 @@ class PFReactor:
         '''Integration through reactor length'''
         while l < self.length:
             '''Calculate volume flowrate trough cell and determine initial concentrations'''
-            if eos_option == "IG":
-                volflow = flow.FLVOLIG
-                act_C = flow.COMPMOLCIG  # [kgmol/m3]
-            elif eos_option == "PENG-ROB":
-                volflow = flow.FLVOLPR
-                act_C = flow.COMPMOLCPR  # [kgmol/m3]
-            else:
-                print('ERROR! Selected EOS for is not available. Specify valid EOS or check spelling')
-                sys.exit()
+            volflow = flow.FLVOL
+            act_C = flow.COMPMOLC  # [kgmol/m3]
+
             '''Residence time for finite rctr cell'''
             dt = cell_volume / volflow * 3600  # [s]
             print('\tintegration l = {:.3f} m'.format(l + dl))
@@ -166,7 +158,7 @@ class PFReactor:
             '''Determine conditions at cell inlet'''
             act_T = flow.T  # [K]
             act_P = flow.P  # [MPa]
-            act_Cp = flow.CPIG  # [kJ/(kg*K)] - only IG option availible
+            act_Cp = flow.CP  # [kJ/(kg*K)] - only IG option availible
             '''Comps concentrations vector [1 x No. comps]'''
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
 
@@ -196,28 +188,17 @@ class PFReactor:
             '''Comps mole fractions at cell outlet'''
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''
-            if eos_option == "IG":
-                new_molflow = sum(list(map(lambda x: flow.FLVOLIG * act_C[x], comp_keys)))  # [kgmol/hr]
-            elif eos_option == "PENG-ROB":
-                new_molflow = sum(list(map(lambda x: flow.FLVOLPR * act_C[x], comp_keys)))  # [kgmol/hr]
-            else:
-                print('ERROR! Selected EOS for is not available. Specify valid EOS or check spelling')
-                sys.exit()
+            new_molflow = sum(list(map(lambda x: flow.FLVOL * act_C[x], comp_keys)))  # [kgmol/hr]
+
             '''Update flow to cell outlet conditions'''
-            flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T)
+            flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T, inlet.eos_option)
             '''Step forward through reactor'''
             l += dl
             t += dt
             '''Dict to store output variables inside the loop before appending to results dataframe'''
             output_line = dict()
             '''Fill output_line'''
-            if eos_option == "IG":
-                output_line.update(flow.COMPMOLIG.copy())
-            elif eos_option == "PENG-ROB":
-                output_line.update(flow.COMPMOLFR.copy())
-            else:
-                print('ERROR! Selected EOS for is not available. Specify valid EOS or check spelling')
-                sys.exit()
+            output_line.update(flow.COMPMOLFR.copy())
             output_line['FLMOL [kgmol/hr]'] = flow.FLMOL
             output_line['l [m]'] = l
             output_line['t [s]'] = t

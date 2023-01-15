@@ -7,29 +7,19 @@ Description : Contains all input data to simulate Plug-Flow Reactor. Added to ge
 '''
 
 
-import databases.database_v1 as db
+import databases.species_database_ussr as sp_db
+import databases.rxns_database_ussr as rxn_db
 
 
-'''Setting up reagents reactions'''
-PROPANE = db.PROPANE
-PROPYLENE = db.PROPYLENE
-ETHANE = db.ETHANE
-ETHYLENE = db.ETHYLENE
-H2 = db.H2
+'''Compset for all species in reactor'''
+rctr_compset = sp_db.compset1
 
 '''Setting up reactions themselves'''
-rxn1 = db.rxn3
-rxn2 = db.rxn4
-rxnset = [rxn1, rxn2]
+rxnset = rxn_db.rxnset1
 
-'''Compsets for individual rxns'''
-rxn1_compset = rxn1.reagents
-rxn2_compset = rxn2.reagents
-'''Compset for all species in reactor'''
-rctr_compset = list(set(rxn1_compset + rxn2_compset))
 
 '''Feed stream mole composition [mol. frac.]'''
-comp_x0 = dict({ETHANE.name : 0.8, PROPANE.name : 0.2, ETHYLENE.name : 0, PROPYLENE.name : 0, H2.name: 0})
+comp_x0 = dict({sp_db.comp0005.name : 0.5, sp_db.comp0007.name : 0.5})
 
 '''Setting up initial conditions'''
 molflow = 1  # Feed stream molar flow [kgmol/hr]
@@ -37,6 +27,6 @@ P = 0.1  # Reaction Pressure [MPa]
 T0 = 1000 + 273.15  # Initial Temperature [K]
 
 '''Reactor rating'''
-tube_L = 10000  # Reaction tubes length [mm]
+tube_L = 5000  # Reaction tubes length [mm]
 tube_ID = 50  # Reaction tubes Internal Diameter [mm]
 tubes_No = 1  # Reaction tubes number

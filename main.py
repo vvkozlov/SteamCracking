@@ -9,7 +9,7 @@ Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolida
 import os
 import chemistry as rctr
 import subprocess as sp
-import config as cfg
+import config_1 as cfg
 import plotter as pl
 import time
 
@@ -32,19 +32,19 @@ tube_ID = cfg.tube_ID  # Reaction tubes Internal Diameter [mm]
 tubes_No = cfg.tubes_No  # Reaction tubes number
 
 '''Initializing feed Stream'''
-inlet_stream = rctr.Stream(rctr_compset, comp_x0, molflow, P, T0)
+inlet_stream = rctr.Stream(rctr_compset, comp_x0, molflow, P, T0, 'IG')
 
 '''Creating Reactor model'''
 cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
 print('Starting calculations...')
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, 'PENG-ROB', True)
+outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('Calculations completed!')
 print('runtime: {:.2f} ms'.format((time.time() - start_time) * 1000))
 print('\nOutlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
 print('Outlet stream temperature [K]:\n\t', outlet_stream.T)
-print('Outlet stream act. vol. flow [m3/h]:\n\t', outlet_stream.FLVOLPR, '\n')
+# print('Outlet stream act. vol. flow [m3/h]:\n\t', outlet_stream.FLVOLPR, '\n')
 
 '''Saving results to .txt file'''
 filename = 'log.txt'
