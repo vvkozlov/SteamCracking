@@ -76,7 +76,8 @@ class Species:
             if C6 <= T <= C7:
                 CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
             else:
-                print('ERROR! DIPPR Equation 107 heat capacity correlation is not suitable for specified temperature')
+                print('ERROR! DIPPR Equation 107 heat capacity correlation is not suitable for specified temperature'
+                      'for component {}'.format(self.name))
                 sys.exit()
                 #CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
 
