@@ -134,18 +134,26 @@ class Stream:
         :param T: [K] Steam temperature
         '''
         self.compset = compset
-        self.COMPMOLFR = x
+        comp_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
+        if len(x) < len(comp_keys):
+            x_dict = dict()
+            for comp in comp_keys:
+                if comp in x.keys():
+                    x_dict[comp] = x[comp]
+                else:
+                    x_dict[comp] = 0
+            self.COMPMOLFR = x_dict
+        else:
+            self.COMPMOLFR = x
         self.FLMOL = molflow
         self.P = P
         self.T = T
         R = 8.31446261815324  # [J/(mole*K)] Gas Constant
         R_field = 10.731577089016  # [psi*ft3/(lbmol*R)] Gas Constant
-        comp_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
         PRKBV1_df = binary_db.PRKBV1.loc[comp_keys, comp_keys]
         '''Make sure that order of elements is same as for other arrays'''
         PRKBV1_df = PRKBV1_df.reindex(columns= comp_keys, index= comp_keys)
         # WARNING! If there are components in keys list that are not present in database DataFrame, NaN cells would be created
-
 
         '''[kg/kgmol] Stream molar weight'''
         self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.MW, self.compset)))
@@ -274,3 +282,7 @@ class Stream:
         '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions (Peng-Robinson EOS)'''
         molconcPR = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOLPR, self.compset))
         self.COMPMOLCPR = dict(zip(comp_keys, molconcPR))
+
+    def setcomposition(self, comp_x0: dict[str: float]):
+
+        return 1
