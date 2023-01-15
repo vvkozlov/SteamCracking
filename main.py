@@ -9,7 +9,7 @@ Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolida
 import os
 import chemistry as rctr
 import subprocess as sp
-import config_1 as cfg
+import config as cfg
 import plotter as pl
 import time
 
@@ -44,7 +44,7 @@ print('Calculations completed!')
 print('runtime: {:.2f} ms'.format((time.time() - start_time) * 1000))
 print('\nOutlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
 print('Outlet stream temperature [K]:\n\t', outlet_stream.T)
-# print('Outlet stream act. vol. flow [m3/h]:\n\t', outlet_stream.FLVOLPR, '\n')
+print('Outlet stream act. vol. flow [m3/h]:\n\t', outlet_stream.FLVOL, '\n')
 
 '''Saving results to .txt file'''
 filename = 'log.txt'
