@@ -60,6 +60,8 @@ class Species:
             - 'Mayer-Kelly' - Mayer-Kelly Heat Capacity Equation
                 coefficients list format: [a, b, c, d, 0, 0, 0]
                 WARNING: from available database applicability limits are not known;
+            - 'Polynomial' - Aspen Property Ideal Gas heat capacity polynomial
+                coefficients format: [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11]
 
         :param T: [K] Temperature
         :return: [J/(mol*K)] Specific Heat Capacity
@@ -80,13 +82,33 @@ class Species:
                       'for component {}'.format(self.name))
                 sys.exit()
                 #CPIG = 4.1868 * (C1 + C2 * (C3 / T / np.sinh(C3 / T)) ** 2 + C4 * (C5 / T / np.cosh(C5 / T)) ** 2)
-
         elif self.CPIGoption == 'Mayer-Kelly':
             a = self.CPIGcoeffs[0]
             b = self.CPIGcoeffs[1]
             c = self.CPIGcoeffs[2]
             d = self.CPIGcoeffs[3]
             CPIG = 4.1868 * (a + b * T + c / T**2 + d * T**2)
+
+        elif self.CPIGoption == 'Polynomial':
+            C1 = self.CPIGcoeffs[0]
+            C2 = self.CPIGcoeffs[1]
+            C3 = self.CPIGcoeffs[2]
+            C4 = self.CPIGcoeffs[3]
+            C5 = self.CPIGcoeffs[4]
+            C6 = self.CPIGcoeffs[5]
+            C7 = self.CPIGcoeffs[6]
+            C8 = self.CPIGcoeffs[7]
+            C9 = self.CPIGcoeffs[8]
+            C10 = self.CPIGcoeffs[9]
+            C11 = self.CPIGcoeffs[10]
+            if C7 <= T <= C8:
+                CPIG = 4.1868 * (C1 + C2 * T + C3 * T **2 + C4 * T**3 + C5 * T**4 + C6 * T**5)
+            elif T < C7:
+                CPIG = C9 + C10 * T**C11
+            else:
+                print('ERROR! Aspen Properties polynomial heat capacity correlation is not suitable for specified'
+                      'temperature for component {}'.format(self.name))
+                sys.exit()
         else:
             print('ERROR! Selected Heat Capacity calculation method for component {} is not available. Specify valid'
               'heat capacity method or check spelling'.format(self.name))
@@ -178,6 +200,12 @@ class Stream:
 
         '''[J/(mol*K)] Stream ideal gas heat capacity at constant pressure'''
         self.CP = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.CPIG(T), self.compset)))
+        # for comp in self.compset:
+        #     print('COMPMOLFR', self.COMPMOLFR[comp.name])
+        #     print('CPIG', comp.CPIG(T))
+        #     print('ID', comp.ID)
+        #     print('T', T)
+        #     print()
         # Check convergence with Hysys! - It does not converge with Hysys.
 
         if self.eos_option == 'IG':
