@@ -24,7 +24,7 @@ class Species:
     .HIGV(T: float)
         Calculates Pure Component Ideal Gas Enthalpy of vapor phase
     '''
-    def __init__(self, ID: int, name: str, formula: str, MW: float, CPIGoption: str, CPIGcoeffs: list[float], DHFORM: float,
+    def __init__(self, ID: int, formula: str, name: str, MW: float, CPIGoption: str, CPIGcoeffs: list[float], DHFORM: float,
                  PC: float, TC: float, OMEGA: float):
         '''
         :param ID: Species ID
