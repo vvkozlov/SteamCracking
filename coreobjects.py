@@ -160,9 +160,9 @@ class Stream:
             - 'PENG-ROB'
         '''
         self.compset = compset
-        comp_keys = list(map(lambda x: x.name, self.compset))  # Keys for component-dependent attributes dictionaries
-        if abs(sum(x.values()) - 1 < 1e-2):
-            if len(x) < len(comp_keys):
+        comp_keys = list(map(lambda x: x.ID, self.compset))  # Keys for component-dependent attributes dictionaries
+        if abs(sum(x.values()) - 1 < 1e-2):  # Check for sum of all comps fractions
+            if len(x) < len(comp_keys):  # Allows to enter only non-zero comps to Stream input
                 x_dict = dict()
                 for comp in comp_keys:
                     if comp in x.keys():
@@ -184,22 +184,22 @@ class Stream:
         R_field = 10.731577089016  # [psi*ft3/(lbmol*R)] Gas Constant
 
         '''[kg/kgmol] Stream molar weight'''
-        self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.MW, self.compset)))
+        self.MW = sum(list(map(lambda x: self.COMPMOLFR[x.ID] * x.MW, self.compset)))
 
         '''[kgmol/hr] Molar flow of individual components'''
-        indmolflows = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name], self.compset))
+        indmolflows = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.ID], self.compset))
         self.FLINDMOL = dict(zip(comp_keys, indmolflows))
 
         '''[mass. fract.] Stream composition in terms of mass fractions'''
-        x_mass = list(map(lambda x: self.COMPMOLFR[x.name] * x.MW / self.MW, self.compset))
+        x_mass = list(map(lambda x: self.COMPMOLFR[x.ID] * x.MW / self.MW, self.compset))
         self.COMPMASSFR = dict(zip(comp_keys, x_mass))
 
         '''[kg/hr] Mass flow of individual components'''
-        indmassflows = list(map(lambda x: self.FLINDMOL[x.name] * x.MW, self.compset))
+        indmassflows = list(map(lambda x: self.FLINDMOL[x.ID] * x.MW, self.compset))
         self.FLINDMASS = dict(zip(comp_keys, indmassflows))
 
         '''[J/(mol*K)] Stream ideal gas heat capacity at constant pressure'''
-        self.CP = sum(list(map(lambda x: self.COMPMOLFR[x.name] * x.CPIG(T), self.compset)))
+        self.CP = sum(list(map(lambda x: self.COMPMOLFR[x.ID] * x.CPIG(T), self.compset)))
         # for comp in self.compset:
         #     print('COMPMOLFR', self.COMPMOLFR[comp.name])
         #     print('CPIG', comp.CPIG(T))
@@ -216,7 +216,7 @@ class Stream:
             self.STDRHO = self.MW/ (R * self.T)
 
             '''[kg/hr] Stream mass flow'''
-            self.FLMASS = sum(list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] * x.MW, self.compset)))
+            self.FLMASS = sum(list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.ID] * x.MW, self.compset)))
 
             '''[m3/hr] Stream volume flow @ Actual conditions (Ideal Gas)'''
             self.FLVOL = self.FLMOL * self.MW / self.RHO
@@ -225,7 +225,7 @@ class Stream:
             self.STDVOL = self.FLMOL * self.MW/ self.STDRHO
 
             '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions (Ideal Gas)'''
-            molconc = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOL, self.compset))
+            molconc = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.ID] / self.FLVOL, self.compset))
             self.COMPMOLC = dict(zip(comp_keys, molconc))
 
         elif self.eos_option == 'PENG-ROB':
@@ -320,7 +320,7 @@ class Stream:
             self.FLVOL = self.FLMOL * self.MW / self.RHO
 
             '''[kgmol/m3] Stream composition in terms of molar concentrations @ Actual Conditions (Peng-Robinson EOS)'''
-            molconcPR = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.name] / self.FLVOL, self.compset))
+            molconcPR = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.ID] / self.FLVOL, self.compset))
             self.COMPMOLC = dict(zip(comp_keys, molconcPR))
         else:
             print('ERROR! Selected EOS for #PLACEYORSTRAMNAMEHERE# is not available. Specify valid EOS or check spelling')

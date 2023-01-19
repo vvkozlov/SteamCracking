@@ -33,8 +33,9 @@ class Reaction:
     .rate(T: float)
         Calculates Reaction Rate at specified temperature with Arrhenius Law
     """
-    def __init__(self, name: str, reagents: list[Species], stoic: list[float], order: list[float], dH: float, k0: float, E0: float):
+    def __init__(self, ID:int, name: str, reagents: list[Species], stoic: list[float], order: list[float], dH: float, k0: float, E0: float):
         """
+        :param ID: Reaction ID
         :param name: Reaction Name
         :param reagents: List of all reagents (same order as in equation)
         :param stoic: List of stoichiometric coefficients for listed components (written in same order as reagents).
@@ -45,10 +46,11 @@ class Reaction:
         :param k0: Reaction Rate Constant (Arrhenius Parameter)
         :param E0: [kJ/mol] Activation Energy
         """
+        self.ID = ID
         self.name = name
         self.reagents = reagents
-        self.stoic = dict(zip(list(map(lambda x: x.name, self.reagents)), stoic))
-        self.order = dict(zip(list(map(lambda x: x.name, self.reagents)), order))
+        self.stoic = dict(zip(list(map(lambda x: x.ID, self.reagents)), stoic))
+        self.order = dict(zip(list(map(lambda x: x.ID, self.reagents)), order))
         self.k0 = k0
         self.E0 = E0
 
@@ -72,8 +74,8 @@ class Reaction:
         '''
         mult = 1  # [kgkol/m3]^n Multiplier that considers contribution of concentrations
         for comp in self.reagents:
-            if self.order[comp.name] < 0:
-                mult = mult * ((conc[comp.name]) ** abs(self.order[comp.name]))
+            if self.order[comp.ID] < 0:
+                mult = mult * ((conc[comp.ID]) ** abs(self.order[comp.ID]))
         # Needs to be revised (use matrix instead of loop)!
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
@@ -126,7 +128,7 @@ class PFReactor:
         temp_df = pd.DataFrame()
         '''Keys for components and reactions lists - to make sure that all matrices are uniform'''
         comp_keys = sorted(flow.COMPMOLFR)  # Some more elegant way to create matching list should be found
-        rxn_keys = list(map(lambda x: x.name, self.rxnset))
+        rxn_keys = list(map(lambda x: x.ID, self.rxnset))
         '''Reaction stoich coefficients matrix [No. rxns x No. comps]'''
         stoic_df = pd.DataFrame(index= rxn_keys, columns= comp_keys)
         '''Reaction order matrix [No. rxns x No. comps]'''
@@ -135,12 +137,12 @@ class PFReactor:
         rxndH_df = pd.DataFrame(index=rxn_keys, columns=['dH'])
         '''Assemble stoich coeffs and rxn enthalpies df's'''
         for rxn in self.rxnset:
-            rxndH_df['dH'][rxn.name] = rxn.dH
+            rxndH_df['dH'][rxn.ID] = rxn.dH
             for comp in inlet.compset:
                 if comp in rxn.reagents:
-                    stoic_df[comp.name][rxn.name] = rxn.stoic[comp.name]
+                    stoic_df[comp.ID][rxn.ID] = rxn.stoic[comp.ID]
                 else:
-                    stoic_df[comp.name][rxn.name] = 0
+                    stoic_df[comp.ID][rxn.ID] = 0
         '''Convert stoich coeffs and rxn enthalpies df's to matrices'''
         stoic_matrix = np.array(stoic_df)
         rxndH_matrix = np.array(rxndH_df)
