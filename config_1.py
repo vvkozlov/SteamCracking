@@ -30,7 +30,7 @@ rxn2_compset = rxn2.reagents
 rctr_compset = list(set(rxn1_compset + rxn2_compset))
 
 '''Feed stream mole composition [mol. frac.]'''
-comp_x0 = dict({ETHANE.name : 0.8, PROPANE.name : 0.2, ETHYLENE.name : 0, PROPYLENE.name : 0, H2.name: 0})
+comp_x0 = dict({ETHANE.ID : 0.8, PROPANE.ID : 0.2, ETHYLENE.ID : 0, PROPYLENE.ID : 0, H2.ID: 0})
 
 '''Setting up initial conditions'''
 molflow = 1  # Feed stream molar flow [kgmol/hr]
