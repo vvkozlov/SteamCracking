@@ -9,7 +9,7 @@ Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolida
 import os
 import chemistry as rctr
 import subprocess as sp
-import config as cfg
+import config_1 as cfg
 import plotter as pl
 import time
 
@@ -53,7 +53,7 @@ print('Saving Results to {}...'.format(filepath))
 log_file = open(filename, 'w')
 log_file.write(calc_hist.to_string())
 log_file.close()
-sp.Popen(['notepad', os.path.join(os.getcwd(), filename)])
+# sp.Popen(['notepad', os.path.join(os.getcwd(), filename)])
 '''Saving results to .csv file'''
 filename = 'log.csv'
 calc_hist.to_csv(filename)

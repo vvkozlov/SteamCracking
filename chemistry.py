@@ -73,12 +73,20 @@ class Reaction:
             where k = k0 * exp(E0 / R / T)
         '''
         mult = 1  # [kgkol/m3]^n Multiplier that considers contribution of concentrations
+        reactatnts_conc = np.array([])
         for comp in self.reagents:
             if self.order[comp.ID] < 0:
                 mult = mult * ((conc[comp.ID]) ** abs(self.order[comp.ID]))
+                reactatnts_conc = np.append(reactatnts_conc, conc[comp.ID])
         # Needs to be revised (use matrix instead of loop)!
+        max_rate = min(reactatnts_conc)
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
+        if rate >= max_rate:
+            rate = max_rate
+        else:
+            pass
+
         '''
         - from Dente, 1979 k0 reported in [l/(mol*s)] --> for second-order reactions rate is in [kgmol/(m3*s)]
         - from Terrasug-2000 k0 reported in [ml/(mol*s)] --> for second-order reactions rate is in 0.001 * [kgmol/(m3*s)]
@@ -166,17 +174,22 @@ class PFReactor:
 
             dQ = 0
             for rxn in self.rxnset:
-                stoic_vector = np.array([])
+                stoic_dict = dict()
                 for comp in flow.compset:
                     if comp in rxn.reagents:
-                        stoic_vector = np.append(stoic_vector, rxn.stoic[comp.ID])
+                        stoic_dict[comp.ID] = rxn.stoic[comp.ID]
                     else:
-                        stoic_vector = np.append(stoic_vector, 0)
+                        stoic_dict[comp.ID] = 0
+                stoic_vector = np.array(list(dict(sorted(stoic_dict.items())).values()))
                 rate = rxn.rate(act_T, act_C)
-                def concentrations_derivative_single(x, y, _stoic_vector = stoic_vector, _rate = rate, _T = act_T):
-                    x = 1
-                    return stoic_vector * rate
-                C_vect = m.integrate('rungekutta4th', concentrations_derivative_single, 1, C_vect, dt)
+                # def concentrations_derivative_single(x, y, _stoic_vector = stoic_vector, _rate = rate, _T = act_T):
+                #     x = 1
+                #     return stoic_vector * rate
+                # C_vect_2 = m.integrate('rungekutta4th', concentrations_derivative_single, 1, C_vect, dt)
+                # print('C_vect', C_vect)
+                # print('add', (dt * stoic_vector * rate))
+                C_vect= (C_vect + (dt * stoic_vector * rate))  # [kgmol/m3]
+                # print(rxn.ID, 'rate', rate)
                 act_C = dict(zip(comp_keys, C_vect))
                 dQ += rate * rxn.dH * -1000
 
