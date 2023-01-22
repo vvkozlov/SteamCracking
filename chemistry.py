@@ -171,14 +171,14 @@ class PFReactor:
                 _rateconst_matrix = np.array(list(map(lambda x: x.rate(_T, dict(zip(comp_keys, y))), _rxnset)))  # [kgmol/(m3*s)]
                 _rateconst_matrix = np.reshape(_rateconst_matrix, (len(_rateconst_matrix), 1))
                 return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
+            '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
+            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C), self.rxnset)))  # [kgmol/(m3*s)]
+            rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
             '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
             C_vect = m.integrate('rungekutta4th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
             '''Update comps concentration dictionary'''
             act_C = dict(zip(comp_keys, C_vect))
 
-            '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
-            rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C), self.rxnset)))  # [kgmol/(m3*s)]
-            rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
             '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
             dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
             '''Functional form of PFReactor heat balance differential equation for integration methods'''
@@ -200,13 +200,17 @@ class PFReactor:
             '''Dict to store output variables inside the loop before appending to results dataframe'''
             output_line = dict()
             '''Fill output_line'''
-            output_line.update(flow.COMPMOLFR.copy())
+            comp_keys_output= list(map(lambda x: x.formula, flow.compset))
+            comp_conc_output = flow.COMPMOLFR.copy().values()
+            output_line.update(dict(zip(comp_keys_output, comp_conc_output)))
             output_line['FLMOL [kgmol/hr]'] = flow.FLMOL
             output_line['l [m]'] = l
             output_line['t [s]'] = t
             output_line['T [K]'] = flow.T
             '''Add output line as new index to output df'''
             temp_df = temp_df.append(output_line, ignore_index=True)
+            # print(comp_keys[0])
+            # temp_df.rename(columns= { : 'khui'}, inplace= True)
         '''Set lengths column as df indexes for result df'''
         temp_df = temp_df.set_index('l [m]', drop=True)
 
