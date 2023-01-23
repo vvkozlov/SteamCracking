@@ -9,7 +9,7 @@ Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolida
 import os
 import chemistry as rctr
 import subprocess as sp
-import config_1 as cfg
+import config as cfg
 import plotter as pl
 import time
 

@@ -60,7 +60,7 @@ class Reaction:
         else:
             self.dH = dH
 
-    def rate(self, T: float, conc: dict):
+    def rate(self, T: float, conc: dict, dt: float):
         '''
         Returns Reaction Rate for forward rxns at specified temperature
 
@@ -79,13 +79,15 @@ class Reaction:
                 mult = mult * ((conc[comp.ID]) ** abs(self.order[comp.ID]))
                 reactatnts_conc = np.append(reactatnts_conc, conc[comp.ID])
         # Needs to be revised (use matrix instead of loop)!
-        max_rate = min(reactatnts_conc)
+        max_rate = min(reactatnts_conc) / dt
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
         if rate >= max_rate:
             rate = max_rate
+            pass
         else:
             pass
+
 
         '''
         - from Dente, 1979 k0 reported in [l/(mol*s)] --> for second-order reactions rate is in [kgmol/(m3*s)]
@@ -181,20 +183,33 @@ class PFReactor:
                     else:
                         stoic_dict[comp.ID] = 0
                 stoic_vector = np.array(list(dict(sorted(stoic_dict.items())).values()))
-                rate = rxn.rate(act_T, act_C)
-                # def concentrations_derivative_single(x, y, _stoic_vector = stoic_vector, _rate = rate, _T = act_T):
-                #     x = 1
-                #     return stoic_vector * rate
-                # C_vect_2 = m.integrate('rungekutta4th', concentrations_derivative_single, 1, C_vect, dt)
-                # print('C_vect', C_vect)
-                # print('add', (dt * stoic_vector * rate))
-                C_vect= (C_vect + (dt * stoic_vector * rate))  # [kgmol/m3]
+                rate = rxn.rate(act_T, act_C, dt)
+                def concentrations_derivative_single(x, y, _stoic_vector = stoic_vector, _rate = rate, _T = act_T):
+                    x = 1
+                    return stoic_vector * rate
+                C_vect= m.integrate('rungekutta4th', concentrations_derivative_single, 1, C_vect, dt)
+                # # print('C_vect', C_vect)
+                # # print('add', (dt * stoic_vector * rate))
+                # k1 = stoic_vector * rate
+                # C1 = dict(zip(comp_keys, C_vect + dt / 2 * k1))
+                # rate_1 = rxn.rate(act_T, C1)  # [kgmol/(m3*s)]
+                # k2 = stoic_vector * rate_1
+                # C2 = dict(zip(comp_keys, C_vect + dt / 2 * k2))
+                # rate_2 = rxn.rate(act_T, C2)  # [kgmol/(m3*s)]
+                # k3 = stoic_vector * rate_2
+                # C3 = dict(zip(comp_keys, C_vect + dt * k3))
+                # rate_3 = rxn.rate(act_T, C3)  # [kgmol/(m3*s)]
+                # k4 = stoic_vector * rate_3
+                # # C_vect1 = C_vect + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+                # C_vect1 = C_vect + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+                # C_vect = (C_vect + (dt * stoic_vector * rate))  # [kgmol/m3]
+
+                # print(C_vect, C_vect1)
                 # print(rxn.ID, 'rate', rate)
                 act_C = dict(zip(comp_keys, C_vect))
                 dQ += rate * rxn.dH * -1000
 
-            # RAPID INCREASE IN TOTAL DH AFTER THIRD STEP! INVESTIGATE RXN HEATS
-            # !!! SUM OF CONC ARA
 
 
 
@@ -222,6 +237,7 @@ class PFReactor:
                 return _dQ * 0.008314463 * y / _P / _Cp
             '''Update cell temperature'''
             new_T = m.integrate('rungekutta4th', temperature_derivative, 1, act_T, dt)
+
             '''Comps mole fractions at cell outlet'''
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''
