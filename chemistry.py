@@ -22,6 +22,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from coreobjects import Species, Stream
 import usermath as m
+from progress.bar import IncrementalBar
 
 
 class Reaction:
@@ -134,21 +135,23 @@ class PFReactor:
         cell_volume = np.pi * (self.diameter ** 2) / 4 * dl  # [m3]
         l = 0  # [m]
         t = 0  # [s]
+        '''Setup progress bar'''
+        bar = IncrementalBar('Integrating...', max= math.ceil(self.length / dl))
+        bar._hidden_cursor = False
         '''Keys for components and reactions lists - to make sure that all matrices are uniform'''
         comp_keys = sorted(flow.COMPMOLFR)  # Some more elegant way to create matching list should be found
         rxn_keys = list(map(lambda x: x.ID, self.rxnset))
         '''Create storages for frames of output DataFrame '''
         frames = []
         '''Integration through reactor length'''
-        while l < self.length:
+        while l <= self.length - dl:
+            '''Move progress bar'''
+            bar.next()
             '''Calculate volume flowrate trough cell and determine initial concentrations'''
             volflow = flow.FLVOL
             act_C = flow.COMPMOLC  # [kgmol/m3]
-
             '''Residence time for finite rctr cell'''
             dt = cell_volume / volflow * 3600  # [s]
-            print('\tintegration l = {:.3f} m'.format(l + dl))
-            print('\t            t = {:.3f} s'.format(t + dt))
             '''Determine conditions at cell inlet'''
             act_T = flow.T  # [K]
             act_P = flow.P  # [MPa]
@@ -209,9 +212,15 @@ class PFReactor:
             output_line['T [K]'] = flow.T
             '''Add output line as new index to list of frames'''
             frames.append(pd.DataFrame([output_line]))
+        '''Stop progress bar'''
+        bar.finish()
         '''Combine all frames to DataFrame'''
         output_df = pd.concat(frames)
         '''Set lengths column as df indexes for result df'''
         output_df = output_df.set_index('l [m]', drop=True)
+
+        print(f'Reactor {"INSERTYOURREACTORIDHERE"} integration completed:\n'
+              f'\trctr length {self.length : .2f} m\tresidense time {t * 1000 : .2f} ms\n'
+              f'\tlength step {dl : .3f} m\ttime step {dt * 1000 : .3f} ms')
 
         return flow, output_df
