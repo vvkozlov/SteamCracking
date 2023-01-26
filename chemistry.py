@@ -14,8 +14,8 @@ References:
         [5] Aspen HYSYS User Manual
 
 """
-
-
+import math
+import os
 import sys
 import numpy as np
 import pandas as pd
@@ -134,29 +134,11 @@ class PFReactor:
         cell_volume = np.pi * (self.diameter ** 2) / 4 * dl  # [m3]
         l = 0  # [m]
         t = 0  # [s]
-        '''Df to store calculation results'''
-        temp_df = pd.DataFrame()
         '''Keys for components and reactions lists - to make sure that all matrices are uniform'''
         comp_keys = sorted(flow.COMPMOLFR)  # Some more elegant way to create matching list should be found
         rxn_keys = list(map(lambda x: x.ID, self.rxnset))
-        '''Reaction stoich coefficients matrix [No. rxns x No. comps]'''
-        stoic_df = pd.DataFrame(index= rxn_keys, columns= comp_keys)
-        '''Reaction order matrix [No. rxns x No. comps]'''
-        order_df = pd.DataFrame(index=rxn_keys, columns=comp_keys)
-        '''Reaction enthalpy difference dH matrix [No. rxns x 1]'''
-        rxndH_df = pd.DataFrame(index=rxn_keys, columns=['dH'])
-        '''Assemble stoich coeffs and rxn enthalpies df's'''
-        for rxn in self.rxnset:
-            rxndH_df['dH'][rxn.ID] = rxn.dH
-            for comp in inlet.compset:
-                if comp in rxn.reagents:
-                    stoic_df[comp.ID][rxn.ID] = rxn.stoic[comp.ID]
-                else:
-                    stoic_df[comp.ID][rxn.ID] = 0
-        '''Convert stoich coeffs and rxn enthalpies df's to matrices'''
-        stoic_matrix = np.array(stoic_df)
-        rxndH_matrix = np.array(rxndH_df)
-
+        '''Create storages for frames of output DataFrame '''
+        frames = []
         '''Integration through reactor length'''
         while l < self.length:
             '''Calculate volume flowrate trough cell and determine initial concentrations'''
@@ -225,9 +207,11 @@ class PFReactor:
             output_line['l [m]'] = l
             output_line['t [s]'] = t
             output_line['T [K]'] = flow.T
-            '''Add output line as new index to output df'''
-            temp_df = temp_df.append(output_line, ignore_index=True)
+            '''Add output line as new index to list of frames'''
+            frames.append(pd.DataFrame([output_line]))
+        '''Combine all frames to DataFrame'''
+        output_df = pd.concat(frames)
         '''Set lengths column as df indexes for result df'''
-        temp_df = temp_df.set_index('l [m]', drop=True)
+        output_df = output_df.set_index('l [m]', drop=True)
 
-        return flow, temp_df
+        return flow, output_df
