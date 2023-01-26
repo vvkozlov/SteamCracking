@@ -173,64 +173,31 @@ class PFReactor:
             act_Cp = flow.CP  # [kJ/(kg*K)] - only IG option availible
             '''Comps concentrations vector [1 x No. comps]'''
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
-
+            '''Loop to update components concentrations after each rxn takes place'''
             dQ = 0
             for rxn in self.rxnset:
+                '''Dictionary of stoichiometric coefficients'''
                 stoic_dict = dict()
                 for comp in flow.compset:
                     if comp in rxn.reagents:
                         stoic_dict[comp.ID] = rxn.stoic[comp.ID]
                     else:
                         stoic_dict[comp.ID] = 0
+                '''Sort stoic dictionary and convert to vector'''
                 stoic_vector = np.array(list(dict(sorted(stoic_dict.items())).values()))
+                '''Calculate rxn rate'''
                 rate = rxn.rate(act_T, act_C, dt)
-                def concentrations_derivative_single(x, y, _stoic_vector = stoic_vector, _rate = rate, _T = act_T):
+                '''Functional form of PFReactor mass balance differential equation for integration methods
+                (It is declare each time inside the loop to allow its integration with m. methods without
+                specifying any additional parameters)'''
+                def concentrations_derivative_single(x, y, _stoic_vector=stoic_vector, _rate=rate, _T=act_T):
                     x = 1
                     return stoic_vector * rate
+                '''Update components concentrations at cell outlet'''
                 C_vect= m.integrate('rungekutta4th', concentrations_derivative_single, 1, C_vect, dt)
-                # # print('C_vect', C_vect)
-                # # print('add', (dt * stoic_vector * rate))
-                # k1 = stoic_vector * rate
-                # C1 = dict(zip(comp_keys, C_vect + dt / 2 * k1))
-                # rate_1 = rxn.rate(act_T, C1)  # [kgmol/(m3*s)]
-                # k2 = stoic_vector * rate_1
-                # C2 = dict(zip(comp_keys, C_vect + dt / 2 * k2))
-                # rate_2 = rxn.rate(act_T, C2)  # [kgmol/(m3*s)]
-                # k3 = stoic_vector * rate_2
-                # C3 = dict(zip(comp_keys, C_vect + dt * k3))
-                # rate_3 = rxn.rate(act_T, C3)  # [kgmol/(m3*s)]
-                # k4 = stoic_vector * rate_3
-                # # C_vect1 = C_vect + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-                # C_vect1 = C_vect + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-
-                # C_vect = (C_vect + (dt * stoic_vector * rate))  # [kgmol/m3]
-
-                # print(C_vect, C_vect1)
-                # print(rxn.ID, 'rate', rate)
                 act_C = dict(zip(comp_keys, C_vect))
+                '''Add rxn heat to total heat at rctr cell'''
                 dQ += rate * rxn.dH * -1000
-
-
-
-
-            # '''Functional form of PFReactor mass balance differential equation for integration methods'''
-            # def concentrations_derivative(x, y, _stoic_matrix= stoic_matrix, _rxnset= self.rxnset, _T= act_T):
-            #     x = 1
-            #     '''Reactions rate constants matrix [No. rxns x 1]'''
-            #     _rateconst_matrix = np.array(list(map(lambda x: x.rate(_T, dict(zip(comp_keys, y))), _rxnset)))  # [kgmol/(m3*s)]
-            #     _rateconst_matrix = np.reshape(_rateconst_matrix, (len(_rateconst_matrix), 1))
-            #     return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
-            #
-            # '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
-            # rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C), self.rxnset)))  # [kgmol/(m3*s)]
-            # rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
-            # '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
-            # C_vect = m.integrate('rungekutta4th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
-            '''Update comps concentration dictionary'''
-            # act_C = dict(zip(comp_keys, C_vect))
-
-            '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
-            # dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
             '''Functional form of PFReactor heat balance differential equation for integration methods'''
             def temperature_derivative(x, y, _dQ= dQ, _P= act_P, _Cp= act_Cp):
                 x = 1
@@ -260,14 +227,7 @@ class PFReactor:
             output_line['T [K]'] = flow.T
             '''Add output line as new index to output df'''
             temp_df = temp_df.append(output_line, ignore_index=True)
-            # print(comp_keys[0])
-            # temp_df.rename(columns= { : 'khui'}, inplace= True)
         '''Set lengths column as df indexes for result df'''
         temp_df = temp_df.set_index('l [m]', drop=True)
-
-        ''' Possible problems in future:
-        1. matrix indexes may be messed up - check comp_keys and rxn_keys when assigning new non-scalar variables
-        2.
-        '''
 
         return flow, temp_df
