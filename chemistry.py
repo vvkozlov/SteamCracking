@@ -57,7 +57,7 @@ class Reaction:
 
         DHFORM_vect = np.array(list(map(lambda x: x.DHFORM, reagents)))
         if dH == 0:
-            self.dH = np.sum(np.array(stoic) * DHFORM_vect) / 10**6
+            self.dH = np.sum(np.array(stoic) * DHFORM_vect) / 10**6  # [kJ/mol]
         else:
             self.dH = dH
 
@@ -67,13 +67,13 @@ class Reaction:
 
         :param T: [K] Temperature
         :param conc: [kmol/m3] Concentrations of components
-        :return: Reaction Rate
+        :return: [kgmol/(m3*s)] Reaction Rate
         '''
         '''
         equation used: v = k * prod([I] ^ i)
             where k = k0 * exp(E0 / R / T)
         '''
-        mult = 1  # [kgkol/m3]^n Multiplier that considers contribution of concentrations
+        mult = 1  # [kgmol/m3]^n Multiplier that considers contribution of concentrations
         reactatnts_conc = np.array([])
         for comp in self.reagents:
             if self.order[comp.ID] < 0:
@@ -83,11 +83,10 @@ class Reaction:
         max_rate = min(reactatnts_conc) / dt
 
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
-        if rate >= max_rate:
-            rate = max_rate
+        if rate <= max_rate:
             pass
         else:
-            pass
+            rate = max_rate
 
 
         '''
@@ -107,17 +106,21 @@ class PFReactor:
     ----------
 
     '''
-    def __init__(self, length: float, diameter: float, numtubes: float, rxnset: list[Reaction]):
+    def __init__(self, length: float, diameter: float, numtubes: float, rxnset: list[Reaction],
+                 duty: float = 0):
         '''
         :param length: [m] Reactor tube length
         :param diameter: [m] Reactor tube diameter
         :param numtubes: [No] Number of reactor tubes
         :param rxnset: [list of Reaction] Set of reactions occurring in reactor
+        :param duty: [kW] External rctr heat duty (furnace heat flow)
         '''
         self.length = length
         self.diameter = diameter
         self.numtubes = numtubes
+        self.tubevolume = np.pi * (self.diameter ** 2) / 4 * self.length
         self.rxnset = rxnset
+        self.duty = duty
 
     # without matrices 1863.49 ms
     def simulation(self, inlet: Stream, dl: float, log: bool) -> tuple[Stream, pd.DataFrame]:
@@ -135,6 +138,8 @@ class PFReactor:
         cell_volume = np.pi * (self.diameter ** 2) / 4 * dl  # [m3]
         l = 0  # [m]
         t = 0  # [s]
+        '''External heat duty per rctr cell considering equal heat distribution through rctr volume'''
+        cell_duty = self.duty / (self.tubevolume * self.numtubes)  # [kJ/(m3*S)]
         '''Setup progress bar'''
         bar = IncrementalBar('Integrating...', max= math.ceil(self.length / dl))
         bar._hidden_cursor = False
@@ -143,6 +148,8 @@ class PFReactor:
         rxn_keys = list(map(lambda x: x.ID, self.rxnset))
         '''Create storages for frames of output DataFrame '''
         frames = []
+        # print(f'cell volume is {cell_volume}\ttube volume is {self.tubevolume}\t'
+        #       f'rctr volume is {self.tubevolume * self.numtubes}\tcell duty is {cell_duty}')
         '''Integration through reactor length'''
         while l <= self.length - dl:
             '''Move progress bar'''
@@ -155,7 +162,7 @@ class PFReactor:
             '''Determine conditions at cell inlet'''
             act_T = flow.T  # [K]
             act_P = flow.P  # [MPa]
-            act_Cp = flow.CP  # [kJ/(kg*K)] - only IG option availible
+            act_Cp = flow.CP  # [J/(mol*K)] - only IG option availible
             '''Comps concentrations vector [1 x No. comps]'''
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
             '''Loop to update components concentrations after each rxn takes place'''
@@ -182,11 +189,12 @@ class PFReactor:
                 C_vect= m.integrate('rungekutta4th', concentrations_derivative_single, 1, C_vect, dt)
                 act_C = dict(zip(comp_keys, C_vect))
                 '''Add rxn heat to total heat at rctr cell'''
-                dQ += rate * rxn.dH * -1000
+                dQ += rate * rxn.dH * -1000  # [kJ/(m3*s)]
+            # print(f'\tdQ at step {dQ}\t ext Q {cell_duty}', end= '')
             '''Functional form of PFReactor heat balance differential equation for integration methods'''
             def temperature_derivative(x, y, _dQ= dQ, _P= act_P, _Cp= act_Cp):
                 x = 1
-                return _dQ * 0.008314463 * y / _P / _Cp
+                return (_dQ + cell_duty) * 0.008314463 * y / _P / _Cp
             '''Update cell temperature'''
             new_T = m.integrate('rungekutta4th', temperature_derivative, 1, act_T, dt)
 
@@ -194,9 +202,13 @@ class PFReactor:
             new_compmolfr = dict(zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''
             new_molflow = sum(list(map(lambda x: flow.FLVOL * act_C[x], comp_keys)))  # [kgmol/hr]
-
             '''Update flow to cell outlet conditions'''
+            mass_in = flow.FLMASS
             flow = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T, inlet.eos_option)
+            '''Check for mass balance'''
+            mass_out = flow.FLMASS
+            mbal = abs(mass_in - mass_out) < 1e-3
+            # print(f'\t{mbal}')
             '''Step forward through reactor'''
             l += dl
             t += dt
