@@ -33,7 +33,8 @@ tubes_No = cfg.tubes_No  # Reaction tubes number
 
 '''Initializing feed Stream'''
 inlet_stream = rctr.Stream(rctr_compset, comp_x0, molflow, P, T0, 'IG')
-print(f'Outlet stream mass flow [kg/h]:\t\t{inlet_stream.FLMASS : .3f}\n')
+print(f'Inlet stream act. vol. flow [m3/hr]:\t{inlet_stream.FLVOL : .3f}')
+print(f'Inlet stream mass flow [kg/h]:\t\t{inlet_stream.FLMASS : .3f}\n')
 
 '''Creating Reactor model'''
 cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
@@ -43,7 +44,7 @@ print('Starting calculations...\n')
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('\nCalculations completed!')
-print(f'runtime: {(time.time() - start_time) * 1000 : .2f} ms\n')
+print(f'runtime: {(time.time() - start_time) : .3f} s\n')
 # print('Outlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
 print(f'Outlet stream temperature [K]:\t\t{outlet_stream.T : .3f}')
 print(f'Outlet stream act. vol. flow [m3/h]:\t{outlet_stream.FLVOL : .3f}')

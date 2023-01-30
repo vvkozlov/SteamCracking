@@ -214,25 +214,29 @@ class PFReactor:
             bar.next()
             '''Setup variables to control material balance convergence loop'''
             correction_l = 1 * 0.5
-            correction_m = 1
             correction_r = 1 * 1.5
             mbal = False
+            counter = 0
             while not mbal:
+                counter += 1
+                correction_m = (correction_l + correction_r) / 2
                 cell_outlet_l, dt_l = step(flow, correction_l)
                 cell_outlet_m, dt_m = step(flow, correction_m)
                 cell_outlet_r, dt_r = step(flow, correction_r)
                 check_l = cell_outlet_l.FLMASS - flow.FLMASS
                 check_m = cell_outlet_m.FLMASS - flow.FLMASS
                 check_r = cell_outlet_r.FLMASS - flow.FLMASS
-                if check_m * check_l < 0:
-                    a = 1
-                elif check_m * check_r < 0:
-                    a = 2
+                if abs(check_m) <= 1e-3:
+                    mbal = True
                 else:
-                    print('here is a problem')
-
-                # ADD CHECK FOR BALANCE!
-
+                    if check_m * check_l < 0:
+                        correction_r = correction_m
+                    elif check_m * check_r < 0:
+                        correction_l = correction_m
+                    else:
+                        print('Here we have a problem!')
+            print(f'\tMBAL converged in {counter} iterations')
+            cell_outlet, dt = cell_outlet_m, dt_m
             '''Update flow to cell outlet conditions'''
             flow = cell_outlet
             '''Step forward through reactor'''
