@@ -31,6 +31,18 @@ def plot_results(results: pd.DataFrame):
 	return 1
 
 
+def printlog(log_name: str):
+	log_data = pd.read_csv(log_name)  # Add name validity check
+	x, y = [],  []
+	axes1 = plt.subplot2grid((4, 6), (0, 0), rowspan= 3, colspan= 3)
+	axes2 = plt.subplot2grid((4, 6), (0, 3), rowspan= 3, colspan= 3)
+	axes3 = plt.subplot2grid((4, 6), (3, 0), rowspan= 1, colspan= 6)
+	comp_data = log_data[log_data.columns == 'l [m]']
+	print(comp_data)
+
+
+printlog('log.csv')
+
 ### WARNING! Needs to be wrapped into function
 def printplot():
 	main_plot_filename = 'log.csv'
