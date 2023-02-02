@@ -19,14 +19,14 @@ rxnset = rxn_db.rxnset1
 
 
 '''Feed stream mole composition [mol. frac.]'''
-comp_x0 = dict({sp_db.comp0005.ID : 0.5, sp_db.comp0007.ID : 0.5})
+comp_x0 = dict({sp_db.comp0003.ID : 0.4509, sp_db.comp0007.ID : 0.5491})
 
 '''Setting up initial conditions'''
-molflow = 1  # Feed stream molar flow [kgmol/hr]
-P = 0.1  # Reaction Pressure [MPa]
-T0 = 1000 + 273.15  # Initial Temperature [K]
+molflow = 9.034e-2  # Feed stream molar flow [kgmol/hr]
+P = 7 * 0.101325  # Reaction Pressure [MPa]
+T0 = 800 + 273.15  # Initial Temperature [K]
 
 '''Reactor rating'''
-tube_L = 10000  # Reaction tubes length [mm]
-tube_ID = 50  # Reaction tubes Internal Diameter [mm]
+tube_L = 4000  # Reaction tubes length [mm]
+tube_ID = 76  # Reaction tubes Internal Diameter [mm]
 tubes_No = 1  # Reaction tubes number
