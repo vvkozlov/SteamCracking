@@ -31,17 +31,67 @@ def plot_results(results: pd.DataFrame):
 	return 1
 
 
-def printlog(log_name: str):
-	log_data = pd.read_csv(log_name)  # Add name validity check
-	x, y = [],  []
-	axes1 = plt.subplot2grid((4, 6), (0, 0), rowspan= 3, colspan= 3)
-	axes2 = plt.subplot2grid((4, 6), (0, 3), rowspan= 3, colspan= 3)
-	axes3 = plt.subplot2grid((4, 6), (3, 0), rowspan= 1, colspan= 6)
-	comp_data = log_data[log_data.columns == 'l [m]']
-	print(comp_data)
+def plotlog(log_name: str):
+	"""
+	Plots data from log file in .csv format created in chemistry.simulate() method.
+	One should pay close attention to formatting of log file because column names are used to differentiate data.
+	Note that log file has to be in same directory as plotter.py script
 
+	:param log_name: [str] Name of log file (with extension) to be printed
+	:return: nothing
+	"""
 
-printlog('log.csv')
+	"""Read log file to pd.DataFrame"""
+	log_data = pd.read_csv(log_name, sep= ',')  # Add name validity check
+	# Add several attempts to read with different separators
+	try:
+		pass
+	except:
+		print('huh?')
+		return 1
+	# finally:
+	# 	print(f'ERROR! Unable to locate logfile named {log_name}. Check filename spelling')
+	# 	return 1
+	"""Extract data headers"""
+	log_data_headers = list(log_data.columns)[1:]  # List of all headers to choose from
+	"""Set names for process parameters columns"""
+	temperature_header = 'T [K]'
+	molflow_header = 'FLMOL [kgmol/hr]'
+	residence_time_header = 't [s]'
+	process_data_headers = list([temperature_header, molflow_header, residence_time_header])
+	"""Prepare data headers to differentiate data"""
+	rxn_data_headers = [x for x in log_data_headers if '-->' in x]  # Stream composition data
+	comp_data_headers = [x for x in log_data_headers if x not in process_data_headers
+						 and x not in rxn_data_headers]  # Reaction rates data
+	length_steps = log_data['l [m]']  # List of integration lengths to use as indexes
+	"""Layout of graphs"""
+	comp_plot = plt.subplot2grid((8, 8), (0, 0), rowspan= 4, colspan= 4)
+	plt.subplots_adjust(wspace= 0.8)
+	rxn_plot = plt.subplot2grid((8, 8), (0, 4), rowspan= 4, colspan= 4)
+	plt.subplots_adjust(hspace= 1)
+	temperature_plot = plt.subplot2grid((8, 8), (4, 0), rowspan= 2, colspan= 8)
+	molflow_plot = plt.subplot2grid((8, 8), (6, 0), rowspan= 2, colspan= 8)
+	"""Set axes limits"""
+	# At the moment auto limits looks just fine
+	"""Set graphs labels"""
+	comp_plot.set_ylabel('Composition [mol. fract.]')
+	comp_plot.set_xlabel('Length [m]')
+	rxn_plot.set_ylabel('Reaction Rate [kgmol/(m3*s)]')
+	rxn_plot.set_xlabel('Length [m]')
+	temperature_plot.set_ylabel('Temperature [K]')
+	molflow_plot.set_ylabel('Molar Flow [kgmol/hr]')
+	molflow_plot.set_xlabel('Length [m]')
+	"""Print data"""
+	comp_plot.plot(length_steps, log_data[comp_data_headers])
+	rxn_plot.plot(length_steps, log_data[rxn_data_headers])
+	temperature_plot.plot(length_steps, log_data['T [K]'])
+	try:
+		molflow_plot.plot(length_steps, log_data['FLMOL [kgmol/hr]'])
+	except:
+		molflow_plot.text(0.1, 0.1, 'Molar Flow Data is not availible')
+	plt.show()
+
+plotlog('log_hysys_dante_1000_steps.csv')
 
 ### WARNING! Needs to be wrapped into function
 def printplot():
