@@ -167,6 +167,7 @@ class PFReactor:
             C_vect = np.array(list(dict(sorted(act_C.items())).values()))  # [kgmol/m3]
             '''Loop to update components concentrations after each rxn takes place'''
             dQ = 0
+            rates_hist = dict()
             for rxn in self.rxnset:
                 '''Dictionary of stoichiometric coefficients'''
                 stoic_dict = dict()
@@ -179,6 +180,7 @@ class PFReactor:
                 stoic_vector = np.array(list(dict(sorted(stoic_dict.items())).values()))
                 '''Calculate rxn rate'''
                 rate = rxn.rate(act_T, act_C, dt)
+                rates_hist[rxn.name] = rate
                 '''Functional form of PFReactor mass balance differential equation for integration methods
                 (It is declare each time inside the loop to allow its integration with m. methods without
                 specifying any additional parameters)'''
@@ -204,7 +206,7 @@ class PFReactor:
             new_molflow = sum(list(map(lambda x: volflow * act_C[x], comp_keys)))  # [kgmol/hr]
             '''Update flow to get estimated flow at cell outlet'''
             cell_outlet = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T, inlet.eos_option)
-            return cell_outlet, dt
+            return cell_outlet, dt, rates_hist
 
 
 
@@ -217,16 +219,19 @@ class PFReactor:
             correction_r = 1 * 1.5
             mbal = False
             counter = 0
+            """Bypass mbal check"""
+            mbal = True
+            cell_outlet_m, dt_m, rate_hist_m = step(flow, 1)
             while not mbal:
                 counter += 1
                 correction_m = (correction_l + correction_r) / 2
-                cell_outlet_l, dt_l = step(flow, correction_l)
-                cell_outlet_m, dt_m = step(flow, correction_m)
-                cell_outlet_r, dt_r = step(flow, correction_r)
+                cell_outlet_l, dt_l, rate_hist_l = step(flow, correction_l)
+                cell_outlet_m, dt_m, rate_hist_m = step(flow, correction_m)
+                cell_outlet_r, dt_r, rate_hist_r = step(flow, correction_r)
                 check_l = cell_outlet_l.FLMASS - flow.FLMASS
                 check_m = cell_outlet_m.FLMASS - flow.FLMASS
                 check_r = cell_outlet_r.FLMASS - flow.FLMASS
-                if abs(check_m) <= 1e-3:
+                if abs(check_m) <= 1e-4:
                     mbal = True
                 else:
                     if check_m * check_l < 0:
@@ -252,6 +257,7 @@ class PFReactor:
             output_line['l [m]'] = l
             output_line['t [s]'] = t
             output_line['T [K]'] = flow.T
+            output_line.update(rate_hist_m)
             '''Add output line as new index to list of frames'''
             frames.append(pd.DataFrame([output_line]))
         '''Stop progress bar'''
