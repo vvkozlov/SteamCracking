@@ -90,7 +90,6 @@ def plotlog(log_name: str):
 		molflow_plot.text(0.1, 0.1, 'Molar Flow Data is not availible')
 	plt.show()
 
-plotlog('log.csv')
 
 ### WARNING! Does not work properly
 def compare_logs():
