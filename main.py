@@ -39,19 +39,19 @@ inlet_mass = inlet_stream.FLMASS
 
 '''Creating Reactor model'''
 cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
-cstreactor.duty = 0
+cstreactor.duty = 3
 print('Starting calculations...\n')
 
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('\nCalculations completed!')
 print(f'runtime: {(time.time() - start_time) : .3f} s\n')
-# print('Outlet stream composition [mol. fract.]:\n\t', outlet_stream.COMPMOLFR)
 print(f'Outlet stream temperature [K]:\t\t{outlet_stream.T : .3f}')
 print(f'Outlet stream act. vol. flow [m3/hr]:\t{outlet_stream.FLVOL : .3f}')
 print(f'Outlet stream mass flow [kg/hr]:\t{outlet_stream.FLMASS : .3f}')
 print(f'Stream mass divergence [kg/hr]:\t{(outlet_stream.FLMASS - inlet_mass) : .3f}\t'
       f'or [%] {(outlet_stream.FLMASS - inlet_mass) / inlet_mass * 100: .3f}\n')
+print('Outlet stream composition [mass. fract.]:\n\t', outlet_stream.COMPMASSFR)
 
 '''Saving results to .txt file'''
 filename = 'log.txt'
@@ -67,7 +67,8 @@ calc_hist.to_csv(filename)
 
 '''Plotting diagrams in matplotlib'''
 print('Plotting graphs...')
-pl.plot_results(calc_hist)
+# pl.plot_results(calc_hist)
+pl.plotlog(filename)
 
 '''Done)'''
 print('done')

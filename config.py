@@ -24,7 +24,7 @@ comp_x0 = dict({sp_db.comp0003.ID : 0.4509, sp_db.comp0007.ID : 0.5491})
 '''Setting up initial conditions'''
 molflow = 9.034e-2  # Feed stream molar flow [kgmol/hr]
 P = 7 * 0.101325  # Reaction Pressure [MPa]
-T0 = 800 + 273.15  # Initial Temperature [K]
+T0 = 697 + 273.15  # Initial Temperature [K]
 
 '''Reactor rating'''
 tube_L = 4000  # Reaction tubes length [mm]

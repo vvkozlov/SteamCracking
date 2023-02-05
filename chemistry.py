@@ -220,8 +220,8 @@ class PFReactor:
             mbal = False
             counter = 0
             """Bypass mbal check"""
-            mbal = True
-            cell_outlet_m, dt_m, rate_hist_m = step(flow, 1)
+            # mbal = True
+            # cell_outlet_m, dt_m, rate_hist_m = step(flow, 1)
             while not mbal:
                 counter += 1
                 correction_m = (correction_l + correction_r) / 2
