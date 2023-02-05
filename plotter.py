@@ -88,8 +88,11 @@ def plotlog(log_name: str):
 		molflow_plot.plot(length_steps, log_data['FLMOL [kgmol/hr]'])
 	except:
 		molflow_plot.text(0.1, 0.1, 'Molar Flow Data is not availible')
+	"""Add legend"""
+	rxn_plot.legend(labels= rxn_data_headers, title= 'huh?', loc='upper left', bbox_to_anchor=(1, 0.5))
 	plt.show()
 
+plotlog('log.csv')
 
 ### WARNING! Does not work properly
 def compare_logs():
