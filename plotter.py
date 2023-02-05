@@ -42,16 +42,15 @@ def plotlog(log_name: str):
 	"""
 
 	"""Read log file to pd.DataFrame"""
-	log_data = pd.read_csv(log_name, sep= ',')  # Add name validity check
-	# Add several attempts to read with different separators
 	try:
-		pass
+		log_data = pd.read_csv(log_name, sep= ',')  # Try with first column separator
+		separator_check = log_data['l [m]']  # Check validity of .csv columns separator
+	except KeyError:
+		log_data = pd.read_csv(log_name, sep=';')  # Try with second column separator
+		separator_check = log_data['l [m]']  # Check validity of .csv columns separator
 	except:
-		print('huh?')
+		print(f'ERROR! Unable to locate logfile named {log_name}. Check filename spelling')
 		return 1
-	# finally:
-	# 	print(f'ERROR! Unable to locate logfile named {log_name}. Check filename spelling')
-	# 	return 1
 	"""Extract data headers"""
 	log_data_headers = list(log_data.columns)[1:]  # List of all headers to choose from
 	"""Set names for process parameters columns"""
@@ -66,9 +65,9 @@ def plotlog(log_name: str):
 	length_steps = log_data['l [m]']  # List of integration lengths to use as indexes
 	"""Layout of graphs"""
 	comp_plot = plt.subplot2grid((8, 8), (0, 0), rowspan= 4, colspan= 4)
-	plt.subplots_adjust(wspace= 0.8)
+	plt.subplots_adjust(wspace= 0.7)
 	rxn_plot = plt.subplot2grid((8, 8), (0, 4), rowspan= 4, colspan= 4)
-	plt.subplots_adjust(hspace= 1)
+	plt.subplots_adjust(hspace= 1.5)
 	temperature_plot = plt.subplot2grid((8, 8), (4, 0), rowspan= 2, colspan= 8)
 	molflow_plot = plt.subplot2grid((8, 8), (6, 0), rowspan= 2, colspan= 8)
 	"""Set axes limits"""
@@ -91,10 +90,10 @@ def plotlog(log_name: str):
 		molflow_plot.text(0.1, 0.1, 'Molar Flow Data is not availible')
 	plt.show()
 
-plotlog('log_hysys_dante_1000_steps.csv')
+plotlog('log.csv')
 
-### WARNING! Needs to be wrapped into function
-def printplot():
+### WARNING! Does not work properly
+def compare_logs():
 	main_plot_filename = 'log.csv'
 	secondary_plot_filename = 'log_hysys_dante_1000_steps.csv' #'log_solver_runge-kutta-1e-2.csv'
 
@@ -129,5 +128,3 @@ def printplot():
 	plt.grid()
 	plt.show()
 	return 1
-
-# printplot()
