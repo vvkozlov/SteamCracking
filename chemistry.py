@@ -34,7 +34,8 @@ class Reaction:
     .rate(T: float)
         Calculates Reaction Rate at specified temperature with Arrhenius Law
     """
-    def __init__(self, ID:int, name: str, reagents: list[Species], stoic: list[float], order: list[float], dH: float, k0: float, E0: float):
+    def __init__(self, ID:int, name: str, reagents: list[Species], stoic: list[float], order: list[float],
+                 dH: float, k0: float, E0: float, sequence: int):
         """
         :param ID: Reaction ID
         :param name: Reaction Name
@@ -46,6 +47,7 @@ class Reaction:
         :param dH: [kJ/mol] Heat of Reaction (if equals zero value will be obtained from reagents enthalpy difference)
         :param k0: Reaction Rate Constant (Arrhenius Parameter)
         :param E0: [kJ/mol] Activation Energy
+        :param sequence: Reaction type (1 - initiation, 2 - propagation, 3 - termination) (TEST MODE)
         """
         self.ID = ID
         self.name = name
@@ -54,6 +56,7 @@ class Reaction:
         self.order = dict(zip(list(map(lambda x: x.ID, self.reagents)), order))
         self.k0 = k0
         self.E0 = E0
+        self.sequence = sequence
 
         DHFORM_vect = np.array(list(map(lambda x: x.DHFORM, reagents)))
         if dH == 0:

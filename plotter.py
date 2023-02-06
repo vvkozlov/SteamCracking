@@ -92,7 +92,6 @@ def plotlog(log_name: str):
 	rxn_plot.legend(labels= rxn_data_headers, title= 'huh?', loc='upper left', bbox_to_anchor=(1, 0.5))
 	plt.show()
 
-plotlog('log.csv')
 
 ### WARNING! Does not work properly
 def compare_logs():

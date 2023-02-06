@@ -4,8 +4,7 @@ Created     : 22.06.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolidate all scripts together.
 '''
-
-
+import math
 import os
 import chemistry as rctr
 import subprocess as sp
@@ -45,13 +44,21 @@ print('Starting calculations...\n')
 '''Integrating through PFReactor model'''
 outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
 print('\nCalculations completed!')
-print(f'runtime: {(time.time() - start_time) : .3f} s\n')
+'''Nice looking runtime report '''
+runtime = time.time() - start_time
+if runtime <= 60:
+      print(f'runtime: {runtime % 60 : .3f} s\n')
+elif runtime > 60:
+      print(f'runtime: {runtime // 60 : .0f} m {runtime % 60 : .1f} s\n')
+else:
+      print(f'Waaaaaaay too long. Runtime: {runtime // 60 : .0f} m {runtime % 60 : .1f} s\n')
+
 print(f'Outlet stream temperature [K]:\t\t{outlet_stream.T : .3f}')
 print(f'Outlet stream act. vol. flow [m3/hr]:\t{outlet_stream.FLVOL : .3f}')
 print(f'Outlet stream mass flow [kg/hr]:\t{outlet_stream.FLMASS : .3f}')
 print(f'Stream mass divergence [kg/hr]:\t{(outlet_stream.FLMASS - inlet_mass) : .3f}\t'
       f'or [%] {(outlet_stream.FLMASS - inlet_mass) / inlet_mass * 100: .3f}\n')
-print('Outlet stream composition [mass. fract.]:\n\t', outlet_stream.COMPMASSFR)
+# print('Outlet stream composition [mass. fract.]:\n\t', outlet_stream.COMPMASSFR)
 
 '''Saving results to .txt file'''
 filename = 'log.txt'
