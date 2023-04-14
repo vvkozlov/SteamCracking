@@ -42,7 +42,7 @@ cstreactor.duty = 3
 print('Starting calculations...\n')
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-2, True)
+outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-7, True)
 print('\nCalculations completed!')
 '''Nice looking runtime report '''
 runtime = time.time() - start_time
