@@ -173,7 +173,7 @@ class Stream:
             else:
                 self.COMPMOLFR = x
         else:
-            print('ERROR! Components concentrations for stream #PLACEYORSTREAMNAMEHERE# are not entered correctly '
+            print('\nERROR! Components concentrations for stream #PLACEYORSTREAMNAMEHERE# are not entered correctly '
                   '(sum <>1). Check concentrations input')
             sys.exit()
         self.FLMOL = molflow
@@ -323,7 +323,7 @@ class Stream:
             molconcPR = list(map(lambda x: self.FLMOL * self.COMPMOLFR[x.ID] / self.FLVOL, self.compset))
             self.COMPMOLC = dict(zip(comp_keys, molconcPR))
         else:
-            print('ERROR! Selected EOS for #PLACEYORSTRAMNAMEHERE# is not available. Specify valid EOS or check spelling')
+            print('\nERROR! Selected EOS for #PLACEYORSTRAMNAMEHERE# is not available. Specify valid EOS or check spelling')
             sys.exit()
 
     def setcomposition(self, comp_x0: dict[str: float]):

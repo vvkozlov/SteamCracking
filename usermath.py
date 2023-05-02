@@ -55,7 +55,7 @@ class UnitsConverter:
             return temperature_K * 1.8
 
 
-def integrate(method: str, f, x0: float, y0: float, h: float):
+def integrate(method: str, f, x0: float, y0: float, h: float) -> tuple:
     """
         Calculate one step forward numerical integration using different methods.
         Available methods:
@@ -85,6 +85,33 @@ def integrate(method: str, f, x0: float, y0: float, h: float):
         k5 = h * f(x0 + h, y0 + 439 / 216 * k1 - 8 * k2 + 3680 / 513 * k3 - 845 / 4104 * k4)
         k6 = h * f(x0 + 1 / 2 * h, y0 - 8 / 27 * k1 + 2 * k2 - 3544 / 2565 * k3 + 1859 / 4104 * k4 - 11 / 40 * k5)
         return y0 + 16 / 135 * k1 + 6656 / 12825 * k3 + 28561 / 56430 * k4 - 9 / 50 * k5 + 2 / 55 * k6
+    elif method == 'rungekuttamerson':
+        terminated = True
+        # !!! Feedback to 'dt' in simulation required for correct work !!!
+        tolerance = 1e-5
+        check = False
+        h0 = h
+        while not check:
+            k0 = h0 * f(x0, y0)
+            k1 = h0 * f(x0 + 1 / 3 * h0, y0 + 1 / 3 * k0)
+            k2 = h0 * f(x0 + 1 / 3 * h0, y0 + 1 / 6 * k0 + 1 / 6 * k1)
+            k3 = h0 * f(x0 + 1 / 2 * h0, y0 + 1 / 8 * k0 + 3 / 8 * k2)
+            k4 = h0 * f(x0 + h0, y0 + 1 / 2 * k2 - 3 / 2 * k2 + 2 * k3)
+            y = y0 + (k0 + 4 * k3 + k4) / 6
+            R = (2 * k0 - 9 * k2 + 8 * k3 - k4) / 30
+            check1 = max(abs(R)) <= tolerance
+            check2 = max(abs(R)) >= (tolerance / 30)
+            # print(max(abs(R)))
+            if check1 and check2:
+                terminated = False
+                break
+            elif not check1:
+                terminated = True
+                return h0 * 0.75, terminated
+            elif not check2:
+                terminated = False
+                return h0 * 1.5, terminated
+        return y, terminated
     else:
         print('ERROR! Specified integration method for function "{}" is not available. Specify valid'
               'integration method or check spelling'.format(f.__name__))

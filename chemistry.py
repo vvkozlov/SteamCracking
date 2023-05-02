@@ -78,18 +78,25 @@ class Reaction:
         '''
         mult = 1  # [kgmol/m3]^n Multiplier that considers contribution of concentrations
         reactatnts_conc = np.array([])
+        # print(self.name)
         for comp in self.reagents:
             if self.order[comp.ID] < 0:
+                # print('comp ', comp.formula, 'conc=', conc[comp.ID])
                 mult = mult * ((conc[comp.ID]) ** abs(self.order[comp.ID]))
+                # print('mult=', mult)
                 reactatnts_conc = np.append(reactatnts_conc, conc[comp.ID])
         # Needs to be revised (use matrix instead of loop)!
         max_rate = min(reactatnts_conc) / dt
-
+        # print('mrate= ', max_rate)
         rate = mult * self.k0 * np.exp(-(self.E0 * 1000) / 8.3144 / T)  # [kgmol/(m3*s)]
+        # print('calc rate= ', rate)
         if rate <= max_rate:
             pass
         else:
+            # pass
             rate = max_rate
+        # print('rate= ', rate)
+        # print('consumed= ', rate * dt, end= '\n\n')
 
 
         '''
@@ -137,6 +144,7 @@ class PFReactor:
         :return: [Stream] Reactor outlet stream and [pd.DataFrame] Calculations results on each iteration
         '''
         '''Determine conditions at rctr inlet'''
+        init_dl = dl
         flow = inlet
         cell_volume = np.pi * (self.diameter ** 2) / 4 * dl  # [m3]
         l = 0  # [m]
@@ -160,6 +168,8 @@ class PFReactor:
         '''Assemble stoich coeffs and rxn enthalpies df's'''
         for rxn in self.rxnset:
             rxndH_df['dH'][rxn.ID] = rxn.dH
+            # print(rxn.reagents)
+            # print(self.rxnset[7].reagents)
             for comp in inlet.compset:
                 if comp in rxn.reagents:
                     stoic_df[comp.ID][rxn.ID] = rxn.stoic[comp.ID]
@@ -172,8 +182,7 @@ class PFReactor:
         frames = []
         # print(f'cell volume is {cell_volume}\ttube volume is {self.tubevolume}\t'
         #       f'rctr volume is {self.tubevolume * self.numtubes}\tcell duty is {cell_duty}')
-
-        def step(cell_inlet: Stream, correction_factor: float) -> tuple[Stream, float]:
+        def step(cell_inlet: Stream, correction_factor: float) -> tuple[Stream, float, dict]:
             '''Calculate volume flowrate trough cell and determine initial concentrations'''
             volflow = cell_inlet.FLVOL * correction_factor
             act_C = cell_inlet.COMPMOLC  # [kgmol/m3]
@@ -218,21 +227,74 @@ class PFReactor:
 
 
             '''Functional form of PFReactor mass balance differential equation for integration methods'''
-            def concentrations_derivative(x, y, _stoic_matrix= stoic_matrix, _rxnset= self.rxnset, _T= act_T):
+            def concentrations_derivative(x, y, _dt=None, _stoic_matrix=None, _rxnset=None, _T=None):
+                if _rxnset is None:
+                    _rxnset = self.rxnset
+                if _stoic_matrix is None:
+                    _stoic_matrix = stoic_matrix
+                if _T is None:
+                    _T = act_T
+                if _dt is None:
+                    _dt = dt
                 x = 1
                 '''Reactions rate constants matrix [No. rxns x 1]'''
-                _rateconst_matrix = np.array(list(map(lambda x: x.rate(_T, dict(zip(comp_keys, y)), dt), _rxnset)))  # [kgmol/(m3*s)]
+                _rateconst_matrix = np.array(list(map(lambda x: x.rate(_T, dict(zip(comp_keys, y)), _dt), _rxnset)))  # [kgmol/(m3*s)]
                 _rateconst_matrix = np.reshape(_rateconst_matrix, (len(_rateconst_matrix), 1))
+                # NEGATIVE rxn RATES!
                 return (_stoic_matrix * _rateconst_matrix).sum(axis= 0)
 
             '''Reactions rate constants matrix [No. rxns x 1] (for new concentrations?)'''
             rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C, dt), self.rxnset)))  # [kgmol/(m3*s)]
             rates_hist = dict(zip(rxn_keys, rateconst_matrix))
             rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
+            # print('\n', rates_hist, '\n')
+            # print(act_C)
             '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
             C_vect = m.integrate('rungekutta4th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
+
+            # C_vect = m.integrate('rungekuttafelberg5th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
+            # print('\nc1 ', C_vect)
+            # print('\nrates ', dt * (stoic_matrix * rateconst_matrix).sum(axis= 0))
+            # C_vect = C_vect + dt * (stoic_matrix * rateconst_matrix).sum(axis= 0)
+            """
+            act_C_aux = act_C
+            rateconst_matrix1 = np.array(list(map(lambda x: x.rate(act_T, act_C_aux, dt), self.rxnset)))
+            rateconst_matrix1 = np.reshape(rateconst_matrix1, (len(rateconst_matrix1), 1))
+            k1 = (stoic_matrix * rateconst_matrix1).sum(axis= 0)
+            i = 0
+            for key in comp_keys:
+                act_C_aux[key] = act_C_aux[key] + k1[i] * dt / 2
+                i += 1
+            rateconst_matrix2 = np.array(list(map(lambda x: x.rate(act_T, act_C_aux, dt), self.rxnset)))
+            rateconst_matrix2 = np.reshape(rateconst_matrix2, (len(rateconst_matrix2), 1))
+            k2 = (stoic_matrix * rateconst_matrix2).sum(axis= 0)
+            i = 0
+            for key in comp_keys:
+                act_C_aux[key] = act_C_aux[key] + k2[i] * dt / 2
+                i += 1
+            rateconst_matrix3 = np.array(list(map(lambda x: x.rate(act_T, act_C_aux, dt), self.rxnset)))
+            rateconst_matrix3 = np.reshape(rateconst_matrix3, (len(rateconst_matrix3), 1))
+            k3 = (stoic_matrix * rateconst_matrix3).sum(axis= 0)
+            i = 0
+            for key in comp_keys:
+                act_C_aux[key] = act_C_aux[key] + k2[i] * dt
+                i += 1
+            rateconst_matrix4 = np.array(list(map(lambda x: x.rate(act_T, act_C_aux, dt), self.rxnset)))
+            rateconst_matrix4 = np.reshape(rateconst_matrix4, (len(rateconst_matrix4), 1))
+            k4 = (stoic_matrix * rateconst_matrix4).sum(axis= 0)
+            C_vect = C_vect + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+            """
+
+            # Different results using m.integrate() and explicitly writing 4th order method!
+
+            # C_vect = list([num if num > 0 else 0 for num in C_vect])
+            # print('c2 ', C_vect)
+
             '''Update comps concentration dictionary'''
             act_C = dict(zip(comp_keys, C_vect))
+            # print('\n', act_C, '\n')
+            # print()
+            # print(act_C)
 
             '''Sum of reaction heat for all rxns in rctr [1 x 1]'''
             dQ = np.sum(rateconst_matrix * rxndH_matrix) * -1000  # [kJ/(m3*s)]
@@ -243,16 +305,20 @@ class PFReactor:
                 return (_dQ + cell_duty) * 0.008314463 * y / _P / _Cp
             '''Update cell temperature'''
             new_T = m.integrate('rungekutta4th', temperature_derivative, 1, act_T, dt)
+            # new_T = act_T
+            '''Comps mole fractions list to replace negative values'''
+            # print('\n', act_C)
+            act_molfract = list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))
+            # act_molfract = list([num if num > 0 else 0 for num in act_molfract])
             '''Comps mole fractions at cell outlet'''
-            new_compmolfr = dict(
-                zip(comp_keys, list(map(lambda x: act_C[x] / sum(act_C.values()), comp_keys))))  # [mol. fract.]
+            new_compmolfr = dict(zip(comp_keys, act_molfract))  # [mol. fract.]
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''
             new_molflow = sum(list(map(lambda x: volflow * act_C[x], comp_keys)))  # [kgmol/hr]
             '''Update flow to get estimated flow at cell outlet'''
             cell_outlet = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T, inlet.eos_option)
-            print('\t', sum(cell_outlet.COMPMASSFR.values()))
+            # print('\t', sum(cell_outlet.COMPMASSFR.values()))
             if any(x < 0 for x in cell_outlet.COMPMASSFR.values()):
-                print('ERROR - Negative mass fractions obtained!')
+                print('\nERROR - Negative mass fractions obtained!')
                 sys.exit()
 
             return cell_outlet, dt, rates_hist
@@ -260,7 +326,7 @@ class PFReactor:
 
 
         '''Integration through reactor length'''
-        while l <= self.length - dl:
+        while l <= self.length:
             '''Move progress bar'''
             bar.next()
             '''Setup variables to control material balance convergence loop'''

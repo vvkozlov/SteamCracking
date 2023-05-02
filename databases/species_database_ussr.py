@@ -11,7 +11,7 @@ from coreobjects import Species
 
 """
 Example:
-SPECIES = Species(ID, 'NAME', 'FORMULA', MW [kg/kgmol], [CPIG calc. option], [DCPIG eq. coeffs. x7], DHFORM [J/kgmol], PC [kPa], TC [degC], OMEGA)
+SPECIES = Species(ID, 'FORMULA', 'NAME', MW [kg/kgmol], [CPIG calc. option], [DCPIG eq. coeffs. x7], DHFORM [J/kgmol], PC [kPa], TC [degC], OMEGA)
 """
 
 comp0001 = Species(1, 'H2O', '', 18, 'Mayer-Kelly', [7.40000, 0.00160, 1.550E-06, -5.500E-10, 0, 0, 0, 0, 0, 0, 0], -241159622.400, 22088.850, 373.850, 0.344)

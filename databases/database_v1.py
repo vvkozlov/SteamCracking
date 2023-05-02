@@ -47,5 +47,5 @@ If dH =0, rxn heat will be calculated from reagents enthalpy difference
 '''
 # rxn1 = Reaction(0, 'Cl2 + Propene --> AllylCl + HCl', [CL2, PROPYLENE, C3H5CL, HCL], [-1, -1, 1, 1], [-1, -1, 1, 1], -113.4919251, 1500000, 63.2672)
 # rxn2 = Reaction(1, 'Cl2 + Propene --> 12-ClC3', [CL2, PROPYLENE, C3H6CL2], [-1, -1, 1], [-1, -1, 1], -186.5439605, 90.46, 15.95636)
-rxn3 = Reaction(2, 'C2H6 --> C2H4 + H2', [ETHANE, ETHYLENE, H2], [-1, 1, 1], [-1, 1, 1], 137.06780078125, 79432800000000, 297.2628)  # pre-exp is in [l/(mol*s)]
-rxn4 = Reaction(3, 'C3H8 --> C2H6 + H2', [PROPANE, PROPYLENE, H2], [-1, 1, 1], [-1, 1, 1], 124.319, 5.01187E+13, 293.076)  # pre-exp is in [l/(mol*s)]
+rxn3 = Reaction(2, 'C2H6 --> C2H4 + H2', [ETHANE, ETHYLENE, H2], [-1, 1, 1], [-1, 1, 1], 137.06780078125, 79432800000000, 297.2628, 1)  # pre-exp is in [l/(mol*s)]
+rxn4 = Reaction(3, 'C3H8 --> C2H6 + H2', [PROPANE, PROPYLENE, H2], [-1, 1, 1], [-1, 1, 1], 124.319, 5.01187E+13, 293.076, 1)  # pre-exp is in [l/(mol*s)]
