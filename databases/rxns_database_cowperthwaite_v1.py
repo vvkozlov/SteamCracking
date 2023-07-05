@@ -80,6 +80,3 @@ rxn0056 = Reaction(56, 'n-C5H11* + H* --> n-C5H12', [comp0041, comp0015, comp001
 
 
 rxnset1 = [rxn0001, rxn0002, rxn0003, rxn0004, rxn0005, rxn0006, rxn0007, rxn0008, rxn0009, rxn0010, rxn0011, rxn0012, rxn0013, rxn0014, rxn0015, rxn0016, rxn0017, rxn0018, rxn0019, rxn0020, rxn0021, rxn0022, rxn0023, rxn0024, rxn0025, rxn0026, rxn0027, rxn0028, rxn0029, rxn0030, rxn0031, rxn0032, rxn0033, rxn0034, rxn0035, rxn0036, rxn0037, rxn0038, rxn0039, rxn0040, rxn0041, rxn0042, rxn0043, rxn0044, rxn0045, rxn0046, rxn0047, rxn0048, rxn0049, rxn0050, rxn0051, rxn0052, rxn0053, rxn0054, rxn0055, rxn0056]
-
-for rxn in rxnset1:
-	print(rxn.name, rxn.dH)

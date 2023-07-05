@@ -129,3 +129,5 @@ def compare_logs():
 	plt.grid()
 	plt.show()
 	return 1
+
+# plotlog('log.csv')

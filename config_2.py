@@ -22,11 +22,13 @@ rxnset = rxn_db.rxnset1
 comp_x0 = dict({sp_db.comp0005.ID : 1})
 
 '''Setting up initial conditions'''
-molflow = 9.034e-2  # Feed stream molar flow [kgmol/hr]
+molflow = 1000  # Feed stream molar flow [kgmol/hr]
 P = 3 * 0.101325  # Reaction Pressure [MPa]
 T0 = 1000 + 273.15  # Initial Temperature [K]
 
 '''Reactor rating'''
-tube_L = 10000  # Reaction tubes length [mm]
+tube_L = 1000  # Reaction tubes length [mm]
 tube_ID = 76  # Reaction tubes Internal Diameter [mm]
 tubes_No = 1  # Reaction tubes number
+
+# Pure ethane with shortened scheme

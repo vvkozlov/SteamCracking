@@ -41,3 +41,5 @@ T0 = 1000 + 273.15  # Initial Temperature [K]
 tube_L = 10000  # Reaction tubes length [mm]
 tube_ID = 50  # Reaction tubes Internal Diameter [mm]
 tubes_No = 1  # Reaction tubes number
+
+# Simple two-reaction scheme

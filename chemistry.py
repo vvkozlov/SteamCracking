@@ -133,7 +133,7 @@ class PFReactor:
         self.duty = duty
 
     # without matrices 1863.49 ms
-    def simulation(self, inlet: Stream, dl: float, log: bool) -> tuple[Stream, pd.DataFrame]:
+    def simulation(self, inlet: Stream, init_dl: float, log: bool) -> tuple[Stream, pd.DataFrame]:
         '''
         Performs  integration along reactor length with Euler method for reactions listed
 
@@ -144,21 +144,21 @@ class PFReactor:
         :return: [Stream] Reactor outlet stream and [pd.DataFrame] Calculations results on each iteration
         '''
         '''Determine conditions at rctr inlet'''
-        init_dl = dl
+        dl = init_dl
         flow = inlet
-        cell_volume = np.pi * (self.diameter ** 2) / 4 * dl  # [m3]
         l = 0  # [m]
         t = 0  # [s]
         '''Store convergence limit for mass balance iterations'''
         mbal_tol = 1e-3
         '''External heat duty per rctr cell considering equal heat distribution through rctr volume'''
         cell_duty = self.duty / (self.tubevolume * self.numtubes)  # [kJ/(m3*s)]
-        '''Setup progress bar'''
-        bar = IncrementalBar('Integrating...', max= math.ceil(self.length / dl))
-        bar._hidden_cursor = False
         '''Keys for components and reactions lists - to make sure that all matrices are uniform'''
         comp_keys = sorted(flow.COMPMOLFR)  # Some more elegant way to create matching list should be found
+        aux_comp_list = list(map(lambda x: x, flow.compset))
+        aux_comp_list.sort(key= lambda x: x.ID, reverse= False)
+        comp_keys_output = list(map(lambda x: x.formula, aux_comp_list))
         rxn_keys = list(map(lambda x: x.ID, self.rxnset))
+        rxn_keys_output = list(map(lambda x: x.name, self.rxnset))
         '''Reaction stoich coefficients matrix [No. rxns x No. comps]'''
         stoic_df = pd.DataFrame(index=rxn_keys, columns=comp_keys)
         '''Reaction order matrix [No. rxns x No. comps]'''
@@ -180,14 +180,18 @@ class PFReactor:
         rxndH_matrix = np.array(rxndH_df)
         '''Create storages for frames of output DataFrame '''
         frames = []
+        conc_frames = np.array([np.array(list(dict(sorted(inlet.COMPMOLC.items())).values()))])
+        step_frames = np.array([0])
         # print(f'cell volume is {cell_volume}\ttube volume is {self.tubevolume}\t'
         #       f'rctr volume is {self.tubevolume * self.numtubes}\tcell duty is {cell_duty}')
-        def step(cell_inlet: Stream, correction_factor: float) -> tuple[Stream, float, dict]:
+
+        def step(cell_inlet: Stream, correction_factor: float, cell_dl: float, negative_balance_check_instep: bool) -> tuple[Stream, float, dict, int, bool]:
+            cell_volume = np.pi * (self.diameter ** 2) / 4 * cell_dl# * self.numtubes # [m3]  ### ADD TUBES NO
             '''Calculate volume flowrate trough cell and determine initial concentrations'''
             volflow = cell_inlet.FLVOL * correction_factor
             act_C = cell_inlet.COMPMOLC  # [kgmol/m3]
             '''Residence time for finite rctr cell'''
-            dt = cell_volume / flow.FLVOL * 3600  # [s]
+            dt = cell_volume / volflow * 3600  # [s]
             '''Determine conditions at cell inlet'''
             act_T = cell_inlet.T  # [K]
             act_P = cell_inlet.P  # [MPa]
@@ -247,15 +251,14 @@ class PFReactor:
             rateconst_matrix = np.array(list(map(lambda x: x.rate(act_T, act_C, dt), self.rxnset)))  # [kgmol/(m3*s)]
             rates_hist = dict(zip(rxn_keys, rateconst_matrix))
             rateconst_matrix = np.reshape(rateconst_matrix, (len(rateconst_matrix), 1))
-            # print('\n', rates_hist, '\n')
-            # print(act_C)
-            '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
-            C_vect = m.integrate('rungekutta4th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
 
-            # C_vect = m.integrate('rungekuttafelberg5th', concentrations_derivative, 1, C_vect, dt)  # [kgmol/m3]
-            # print('\nc1 ', C_vect)
-            # print('\nrates ', dt * (stoic_matrix * rateconst_matrix).sum(axis= 0))
-            # C_vect = C_vect + dt * (stoic_matrix * rateconst_matrix).sum(axis= 0)
+            '''Comps conc at cell outlet from PFReactor diff equation [1 x No. comps]'''
+            # print(conc_frames)
+            C_vect, cell_dl, integration_status = m.integrate('rungekuttamerson', concentrations_derivative, 1, C_vect, dt, negative_balance_check_instep)  # [kgmol/m3]
+            # C_vect, cell_dl, integration_status = m.integrate('rungekutta4th', concentrations_derivative, 1, C_vect, dt, balance_check_instep)  # [kgmol/m3]
+            # print('dl ->', dl)
+            # C_vect, cell_dl, integration_status = m.integrate('gear', concentrations_derivative, step_frames, conc_frames, dt, balance_check_instep)  # [kgmol/m3]
+
             """
             act_C_aux = act_C
             rateconst_matrix1 = np.array(list(map(lambda x: x.rate(act_T, act_C_aux, dt), self.rxnset)))
@@ -287,11 +290,9 @@ class PFReactor:
 
             # Different results using m.integrate() and explicitly writing 4th order method!
 
-            # C_vect = list([num if num > 0 else 0 for num in C_vect])
-            # print('c2 ', C_vect)
-
             '''Update comps concentration dictionary'''
             act_C = dict(zip(comp_keys, C_vect))
+            # print(max(act_C.values()))
             # print('\n', act_C, '\n')
             # print()
             # print(act_C)
@@ -304,7 +305,9 @@ class PFReactor:
                 x = 1
                 return (_dQ + cell_duty) * 0.008314463 * y / _P / _Cp
             '''Update cell temperature'''
-            new_T = m.integrate('rungekutta4th', temperature_derivative, 1, act_T, dt)
+            # new_T = m.integrate('rungekutta4th', temperature_derivative, 1, act_T, dt, balance_check_instep)
+            new_T, cell_dl_temperature, integration_status_temperature = m.integrate('rungekuttamerson', temperature_derivative, 1, act_T, dt, negative_balance_check_instep)
+
             # new_T = act_T
             '''Comps mole fractions list to replace negative values'''
             # print('\n', act_C)
@@ -315,26 +318,88 @@ class PFReactor:
             '''Comps mole flow at cell outlet (volume calculated from PR EOS or IG EOS at cell inlet)'''
             new_molflow = sum(list(map(lambda x: volflow * act_C[x], comp_keys)))  # [kgmol/hr]
             '''Update flow to get estimated flow at cell outlet'''
-            cell_outlet = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T, inlet.eos_option)
+            outlet = Stream(flow.compset, new_compmolfr, new_molflow, act_P, new_T, inlet.eos_option)
             # print('\t', sum(cell_outlet.COMPMASSFR.values()))
-            if any(x < 0 for x in cell_outlet.COMPMASSFR.values()):
-                print('\nERROR - Negative mass fractions obtained!')
-                sys.exit()
+            if any(x < 0 for x in outlet.COMPMASSFR.values()):
+                # print('\nERROR - Negative mass fractions obtained!')
+                outlet = cell_inlet
+                integration_status = 1
+                negative_balance_check_instep = True
+                # sys.exit()
 
-            return cell_outlet, dt, rates_hist
+            return outlet, dt, rates_hist, integration_status, negative_balance_check_instep
 
 
 
         '''Integration through reactor length'''
+        dl = init_dl
         while l <= self.length:
-            '''Move progress bar'''
-            bar.next()
+            # Printout progress bar
+            # sys.stdout.write('\tintegrating at {:.4e}/{:.2f} m with step of {:.2e} m\n\r'.format(l, self.length, dl))
+            sys.stdout.write('\tintegrating at {:.4f}/{:.4f} m with step of {:.2e} m\r'.format(l, self.length, dl))
+            negative_balance_check = False
+            counter = 0
+            step_status = -1
+            while not step_status == 0:
+                # sys.stdout.write('balance status: {}\r'.format(balance_check))
+                cell_outlet, dt, rates_hist, step_status, negative_balance_check = step(flow, 1, dl, negative_balance_check)
+                # print(max(cell_outlet.COMPMOLC.values()), dl)
+                # print(step_status, dl)
+
+
+                if step_status == 1:
+                    dl *= 0.8
+                    counter += 1
+                    # print('whoops')
+                elif step_status == 2:
+                    dl *= 1.2
+                # print(counter)
+                # if l >= 3.e-7:
+                #     dl *= 1.01
+                # if 6e-8 <= l <= 6.1e-8:
+                #     dl *= 0.1
+                # if 6.3e-8 <= l <= 6.31e-8:
+                #     dl *= 10
+
+
+                ###!!!########################################################
+                mass_balance_check = abs(flow.FLMASS - cell_outlet.FLMASS) <= 1e-5
+                # mass_balance_check = True
+                corrector_l = 0.5
+                corrector_r = 2
+                cell_outlet_m = cell_outlet
+                while not mass_balance_check:
+                    corrector_m = (corrector_l + corrector_r) / 2
+                    cell_outlet_l = Stream(cell_outlet.compset, cell_outlet.COMPMOLFR, cell_outlet.FLMOL * corrector_l,
+                                           cell_outlet.P, cell_outlet.T, 'IG')
+                    cell_outlet_m = Stream(cell_outlet.compset, cell_outlet.COMPMOLFR, cell_outlet.FLMOL * corrector_m,
+                                           cell_outlet.P, cell_outlet.T, 'IG')
+                    cell_outlet_r = Stream(cell_outlet.compset, cell_outlet.COMPMOLFR, cell_outlet.FLMOL * corrector_r,
+                                           cell_outlet.P, cell_outlet.T, 'IG')
+                    check_l = cell_outlet_l.FLMASS - flow.FLMASS
+                    check_m = cell_outlet_m.FLMASS - flow.FLMASS
+                    check_r = cell_outlet_r.FLMASS - flow.FLMASS
+                    if abs(check_m) <= 1e-5:
+                        mass_balance_check = True
+                    else:
+                        if check_m * check_l < 0:
+                            corrector_r = corrector_m
+                        elif check_m * check_r < 0:
+                            corrector_l = corrector_m
+                        else:
+                            print('Here we have a problem!')
+                cell_outlet = cell_outlet_m
+                if not mass_balance_check:
+                    print(mass_balance_check)
+                ###!!!##########################################################
+
+            """
             '''Setup variables to control material balance convergence loop'''
             correction_l = 1 * 0.5
             correction_r = 1 * 1.5
             mbal = False
             counter = 0
-            """Bypass mbal check"""
+            # Bypass mbal check
             mbal = True
             cell_outlet_m, dt_m, rate_hist_m = step(flow, 1)
             while not mbal:
@@ -356,7 +421,9 @@ class PFReactor:
                     else:
                         print('Here we have a problem!')
             # print(f'\tMBAL converged in {counter} iterations')
-            cell_outlet, dt = cell_outlet_m, dt_m
+            cell_outlet, dt, rates_hist = cell_outlet_m, dt_m, rate_hist_m
+            """
+
             '''Update flow to cell outlet conditions'''
             flow = cell_outlet
             '''Step forward through reactor'''
@@ -365,25 +432,28 @@ class PFReactor:
             '''Dict to store output variables inside the loop before appending to results dataframe'''
             output_line = dict()
             '''Fill output_line'''
-            comp_keys_output= list(map(lambda x: x.formula, flow.compset))
+            # comp_keys_output= list(map(lambda x: x, flow.compset))
             comp_conc_output = flow.COMPMOLFR.copy().values()
             output_line.update(dict(zip(comp_keys_output, comp_conc_output)))
             output_line['FLMOL [kgmol/hr]'] = flow.FLMOL
             output_line['l [m]'] = l
             output_line['t [s]'] = t
             output_line['T [K]'] = flow.T
-            output_line.update(rate_hist_m)
+            # output_line.update(rates_hist)
             '''Add output line as new index to list of frames'''
             frames.append(pd.DataFrame([output_line]))
-        '''Stop progress bar'''
-        bar.finish()
+            conc_frame = np.array(list(flow.COMPMOLC.copy().values()))
+            step_frame = l
+            conc_frames = np.append(conc_frames, [conc_frame], axis= 0)
+
+            step_frames = np.append(step_frames, step_frame)
         '''Combine all frames to DataFrame'''
         output_df = pd.concat(frames)
         '''Set lengths column as df indexes for result df'''
         output_df = output_df.set_index('l [m]', drop=True)
 
         print(f'Reactor {"INSERTYOURREACTORIDHERE"} integration completed:\n'
-              f'\trctr length {self.length : .2f} m\tresidense time {t * 1000 : .2f} ms\n'
-              f'\tlength step {dl : .3f} m\ttime step {dt * 1000 : .3f} ms')
+              f'\trctr length {self.length : .2f} m\t\t\tresidense time {t * 1000 : .2f} ms\n'
+              f'\tlast length step {dl : .3e} m\t\tlast time step {dt * 1000 : .3e} ms')
 
         return flow, output_df

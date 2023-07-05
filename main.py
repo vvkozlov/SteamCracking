@@ -8,7 +8,7 @@ import math
 import os
 import chemistry as rctr
 import subprocess as sp
-import config_1 as cfg
+import config_3 as cfg
 import plotter as pl
 import time
 
@@ -32,18 +32,19 @@ tubes_No = cfg.tubes_No  # Reaction tubes number
 
 '''Initializing feed Stream'''
 inlet_stream = rctr.Stream(rctr_compset, comp_x0, molflow, P, T0, 'IG')
-print(f'Outlet stream temperature [K]:\t\t{inlet_stream.T : .3f}')
+print(f'Inlet stream temperature [K]:\t\t{inlet_stream.T : .3f}')
 print(f'Inlet stream act. vol. flow [m3/hr]:\t{inlet_stream.FLVOL : .3f}')
+print(f'Inlet stream molar flow [kgmol/hr]:\t{inlet_stream.FLMOL : .3f}')
 print(f'Inlet stream mass flow [kg/hr]:\t\t{inlet_stream.FLMASS : .3f}\n')
 inlet_mass = inlet_stream.FLMASS
 
 '''Creating Reactor model'''
 cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
-# cstreactor.duty = 30
+cstreactor.duty = 10 * 10e3
 print('Starting calculations...\n')
 
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-3, True)
+outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-9, True)
 print('\nCalculations completed!')
 '''Nice looking runtime report '''
 runtime = time.time() - start_time
@@ -58,7 +59,7 @@ print(f'Outlet stream temperature [K]:\t\t{outlet_stream.T : .3f}')
 print(f'Outlet stream act. vol. flow [m3/hr]:\t{outlet_stream.FLVOL : .3f}')
 print(f'Outlet stream molar flow [m3/hr]:\t{outlet_stream.FLMOL : .3f}')
 print(f'Outlet stream mass flow [kg/hr]:\t{outlet_stream.FLMASS : .3f}')
-print(f'Stream mass divergence [kg/hr]:\t{(outlet_stream.FLMASS - inlet_mass) : .3f}\t'
+print(f'Stream mass flow divergence [kg/hr]:\t{(outlet_stream.FLMASS - inlet_mass) : .3f}\t'
       f'or [%] {(outlet_stream.FLMASS - inlet_mass) / inlet_mass * 100: .3f}\n')
 # print('Outlet stream composition [mass. fract.]:\n\t', outlet_stream.COMPMASSFR)
 

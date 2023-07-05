@@ -42,6 +42,7 @@ comp0062 = Species(62, '1-C6H12', '', 84, 'Mayer-Kelly', [-8.75000, 0.16600, -1.
 comp0078 = Species(78, 'cyC6H10', '', 82, 'Mayer-Kelly', [-21.30000, 0.18700, -1.460E-04, 4.400E-08, 0, 0, 0, 0, 0, 0, 0], -5400970.710, 4235.385, 285.850, 0.210)
 comp0084 = Species(84, 'C5H6', 'Cyclopentadiene', 66, 'Mayer-Kelly', [3.42000, 0.04890, -4.960E-06, 0, 0, 0, 0, 0, 0, 0, 0], 133140208.200, 4559.625, 236.850, 0.132)
 comp0145 = Species(145, 'n-C7H12', '', 96, 'Mayer-Kelly', [0.77100, 0.13600, -7.310E-05, 0, 0, 0, 0, 0, 0, 0, 0], 63262532.890, 4053.000, 256.850, 0.680)
+comp0001 = Species(1, 'H2O', '', 18, 'Mayer-Kelly', [7.40000, 0.00160, 1.550E-06, -5.500E-10, 0, 0, 0, 0, 0, 0, 0], -241159622.400, 22088.850, 373.850, 0.344)
 
 
-compset1 = [comp0002,  comp0003,  comp0004,  comp0005,  comp0006,  comp0007,  comp0008,  comp0009,  comp0011,  comp0013,  comp0015,  comp0016,  comp0017,  comp0018,  comp0019,  comp0020,  comp0022,  comp0023,  comp0026,  comp0036,  comp0037,  comp0041, comp0050,  comp0053, comp0062,comp0078,  comp0084, comp0145]
+compset1 = [comp0001, comp0002,  comp0003,  comp0004,  comp0005,  comp0006,  comp0007,  comp0008,  comp0009,  comp0011,  comp0013,  comp0015,  comp0016,  comp0017,  comp0018,  comp0019,  comp0020,  comp0022,  comp0023,  comp0026,  comp0036,  comp0037,  comp0041, comp0050,  comp0053, comp0062,comp0078,  comp0084, comp0145]
