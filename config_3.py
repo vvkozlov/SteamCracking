@@ -7,6 +7,8 @@ Description : Contains all input data to simulate Plug-Flow Reactor. Added to ge
 '''
 
 
+# import databases.species_database_cowperthwaite as sp_db
+# import databases.rxns_database_cowperthwaite_v2 as rxn_db
 import databases.species_database_cowperthwaite as sp_db
 import databases.rxns_database_cowperthwaite_v2 as rxn_db
 
@@ -34,12 +36,16 @@ sp_db.comp0001.ID : 0.436925383767861
 
 '''Setting up initial conditions'''
 molflow = 489.5318442  # Feed stream molar flow [kgmol/hr]
-P = 0.51 * 0.101325  # Reaction Pressure [MPa]
-T0 = 851 + 273.15  # Initial Temperature [K]
+P = 0.51 #* 0.101325  # Reaction Pressure [MPa]
+T0 = 1050 + 273.15  # Initial Temperature [K] -previous 1050
 
 '''Reactor rating'''
 tube_L = 7700  # Reaction tubes length [mm]
 tube_ID = 90 - 6.5 * 2 # Reaction tubes Internal Diameter [mm]
-tubes_No = 16  # Reaction tubes number
+tubes_No = 1  # Reaction tubes number
 
-# Kstovo
+'''Setting Furnace Heat Duty'''
+furnace_duty = 0.48 * 10e3  # Furnace section heat duty [kJ/s]
+
+
+# Kstovo 31-03-11 - matches with plant with 0.48 MW of heat duty

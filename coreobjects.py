@@ -11,7 +11,50 @@ References	:
 import sys
 import numpy as np
 import databases.PRBKV_database as binary_db
-from usermath import UnitsConverter as convert
+
+class UnitsConverter:
+	"""
+		Describes units conversions for pressure, flowrate and temperature units
+
+		Classes
+		----------
+		- .Pressure(pressure: float)
+			Converts pressure units
+		- .Flowrate(flowrate: float)
+			Converts flowrate units
+		- .Temperature(temperature: float)
+			Converts temperature units
+		"""
+	class Pressure:
+		def bara_to_kgfpcm2g(pressure_bara: float):
+			return pressure_bara * 1.0197162129779282 - 1.033227
+		def kgfpcm2g_to_bara(pressure_kgfpcm2: float):
+			return (pressure_kgfpcm2 + 1.033227) / 1.0197162129779282
+		def psi_to_kgfpcm2(pressure_psi: float):
+			return pressure_psi * 0.0703069579640175
+		def bar_to_psi(pressure_bar: float):
+			return pressure_bar * 14.503773773
+		def bar_to_kPa(pressure_bar: float):
+			return pressure_bar * 100
+		def kPa_to_psi(pressure_kPa: float):
+			return pressure_kPa * 0.1450377377
+		def MPa_to_psi(pressure_MPa: float):
+			return pressure_MPa * 1000 * 0.1450377377
+		def psi_to_kPa(pressure_psi: float):
+			return pressure_psi / 0.1450377377
+	class Flowrate:
+		def sm3d_to_sm3y(flowrate_sm3pday: float):
+			return flowrate_sm3pday * 365
+	class Temperature:
+		def C_to_R(temperature_C: float):
+			return (temperature_C + 273.15) * 9 / 5
+		def R_to_K(temperature_R: float):
+			return temperature_R * 5 / 9
+		def C_to_K(temperature_C: float):
+			return temperature_C + 273.15
+		def K_to_R(temperature_K: float):
+			return temperature_K * 1.8
+
 
 class Species:
     '''
@@ -236,10 +279,10 @@ class Stream:
             '''Z-factor'''
             # FOR ONE PHASE (VAPOR) ONLY!
             '''Component-dependent variables'''
-            Pc_arr = np.array(list(map(lambda x: convert.Pressure.kPa_to_psi(x.PC), self.compset)))  # Array of PC [psi]
-            Tc_arr = np.array(list(map(lambda x: convert.Temperature.C_to_R(x.TC), self.compset)))  # Array of TC [R]
+            Pc_arr = np.array(list(map(lambda x: UnitsConverter.Pressure.kPa_to_psi(x.PC), self.compset)))  # Array of PC [psi]
+            Tc_arr = np.array(list(map(lambda x: UnitsConverter.Temperature.C_to_R(x.TC), self.compset)))  # Array of TC [R]
             w_arr = np.array(list((map(lambda x: x.OMEGA, self.compset)))) # Array of Acentric factors [dmls.]
-            Tr_arr = convert.Temperature.K_to_R(self.T) / Tc_arr  # Array of Reduced Temperatures [R/R]
+            Tr_arr = UnitsConverter.Temperature.K_to_R(self.T) / Tc_arr  # Array of Reduced Temperatures [R/R]
             kappa_arr = np.where(w_arr > 0.49,
                                  0.379642 + 1.4853 * w_arr - 0.164423 * w_arr ** 2 + 0.01666 * w_arr ** 3,
                                  0.37464 + 1.5422 * w_arr - 0.26992 * (w_arr ** 2))
@@ -261,8 +304,8 @@ class Stream:
             bj = np.sum(xij_arr * bi_arr)  # Second mixing rule variable 'bj'
 
             '''Phase-dependent variables (eq. 3-29, 3-30 from [1])'''  # FOR ONE PHASE (VAPOR) ONLY!
-            P_field = convert.Pressure.MPa_to_psi(self.P)
-            T_field = convert.Temperature.K_to_R(self.T)
+            P_field = UnitsConverter.Pressure.MPa_to_psi(self.P)
+            T_field = UnitsConverter.Temperature.K_to_R(self.T)
             Aj = aj * P_field / R_field ** 2 / T_field ** 2  # First phase-dependent variable 'Aj'
             Bj = bj * P_field / R_field / T_field  # Second phase-dependent variable 'Bj'
 

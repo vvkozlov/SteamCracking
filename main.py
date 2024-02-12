@@ -8,11 +8,29 @@ import math
 import os
 import chemistry as rctr
 import subprocess as sp
-import config_3 as cfg
+import config_1 as cfg
 import plotter as pl
 import time
+import datetime
 
+'''Setting case  name'''
+print('Save log and config files?: y/n')
+save_option = str(input())
+case_name = ''
+if save_option == 'y':
+      save_option = True
+      print('Input case name:')
+      case_name = str(input())
+      '''Setting console clone file'''
+      console_clone = pl.Logger(os.path.join(os.getcwd(), 'log\{}_status.dat'.format(case_name)))
+else:
+      save_option = False
+      case_name = 'local case'
+
+'''Logging execution details'''
 start_time = time.time()
+print('{}\tcase name: {}\t\tconfig file: {}'.format(time.strftime('%d.%m.%Y %H:%M', time.localtime(start_time + 14400)), case_name, cfg.__name__))  # + 14400 sec is conversion to GMT+7 time zone
+print('-'*70, end= '\n\n')
 print('Initializing calculations...')
 
 '''Setting up reactions'''
@@ -40,18 +58,22 @@ inlet_mass = inlet_stream.FLMASS
 
 '''Creating Reactor model'''
 cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
-cstreactor.duty = 10 * 10e3
+# cstreactor.duty = cfg.furnace_duty
 print('Starting calculations...\n')
 
+'''Setting denominator for number of outputed lines in logs'''
+output_reduction = 1
 '''Integrating through PFReactor model'''
-outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 1e-9, True)
+outlet_stream, calc_hist = cstreactor.simulation(inlet_stream, 8e-5, True, output_reduction)
 print('\nCalculations completed!')
 '''Nice looking runtime report '''
 runtime = time.time() - start_time
 if runtime <= 60:
       print(f'runtime: {runtime % 60 : .3f} s\n')
-elif runtime > 60:
+elif runtime <=3600:
       print(f'runtime: {runtime // 60 : .0f} m {runtime % 60 : .1f} s\n')
+elif runtime >3600:
+      print(f'runtime: {runtime // 3600 : .0f} hr {(runtime - 3600 * runtime // 3600) // 60 : .0f} m {(runtime - 3600 * runtime // 3600) % 60 : .1f} s\n')
 else:
       print(f'Waaaaaaay too long. Runtime: {runtime // 60 : .0f} m {runtime % 60 : .1f} s\n')
 
@@ -61,24 +83,28 @@ print(f'Outlet stream molar flow [m3/hr]:\t{outlet_stream.FLMOL : .3f}')
 print(f'Outlet stream mass flow [kg/hr]:\t{outlet_stream.FLMASS : .3f}')
 print(f'Stream mass flow divergence [kg/hr]:\t{(outlet_stream.FLMASS - inlet_mass) : .3f}\t'
       f'or [%] {(outlet_stream.FLMASS - inlet_mass) / inlet_mass * 100: .3f}\n')
-# print('Outlet stream composition [mass. fract.]:\n\t', outlet_stream.COMPMASSFR)
 
-'''Saving results to .txt file'''
-filename = 'log.txt'
-filepath = os.path.join(os.getcwd(), filename)
-print('Saving Results to {}...'.format(filepath))
-log_file = open(filename, 'w')
-log_file.write(calc_hist.to_string())
-log_file.close()
-# sp.Popen(['notepad', os.path.join(os.getcwd(), filename)])
-'''Saving results to .csv file'''
-filename = 'log.csv'
-calc_hist.to_csv(filename)
+if save_option:
+      '''Saving results to .txt file'''
+      log_filename = '{}_log'.format(case_name)
+      filepath_txt = os.path.join(os.getcwd(), 'log\{}.txt'.format(log_filename))
+      print('Saving Results to {}...'.format(filepath_txt))
+      log_file = open(filepath_txt, 'w')
+      log_file.write(calc_hist.to_string())
+      log_file.close()
+      # sp.Popen(['notepad', os.path.join(os.getcwd(), filename)])
+      '''Saving results to .csv file'''
+      filepath_csv = os.path.join(os.getcwd(), 'log\{}.csv'.format(log_filename))
+      print('Saving Results to {}...'.format(filepath_csv))
+      calc_hist.to_csv(filepath_csv)
 
-'''Plotting diagrams in matplotlib'''
-print('Plotting graphs...')
-# pl.plot_results(calc_hist)
-pl.plotlog(filename)
+      '''Plotting diagrams in matplotlib'''
+      print('Plotting graphs...')
+      # pl.plot_results(calc_hist)
+      pl.plotlog(filepath_csv)
+      console_clone.close()
+else:
+      pl.plothist(calc_hist)
 
 '''Done)'''
 print('done')
