@@ -283,8 +283,10 @@ def plot_profiles(log_name: str):
     plt.show()
 
 
-def plot_compare(log_name_1: str, log_name_2: str, header: str, labels: list[str]):
-    """Import first log"""
+def plot_compare(log_name_1: str, log_name_2: str, header: str, labels: list[str], marker: str):
+    """Import first log
+    :param marker allows to select dots or line for data
+    """
     try:
         log_data_1 = pd.read_csv(log_name_1, sep=',')  # Try with first column separator
         separator_check = log_data_1['l [m]']  # Check validity of .csv columns separator
@@ -379,9 +381,13 @@ def plot_compare(log_name_1: str, log_name_2: str, header: str, labels: list[str
     plot_to_compare.set_ylabel(custom_ylabel)
     plot_to_compare.set_xlabel('Length [m]')
     """Print data"""
-    # plot_to_compare.plot(length_steps_1, log_data_1[header], 'or', length_steps_2, log_data_2[header], 'ob', ms=0.2)
-    plot_to_compare.plot(length_steps_1, log_data_1[header], length_steps_2, log_data_2[header])
-    # plot_to_compare.plot(length_steps_1, log_data_1[header], 'or', length_steps_2, log_data_2[header], 'ob', ms=0.2)
+    if marker == 'points':
+        plot_to_compare.plot(length_steps_1, log_data_1[header], 'or', length_steps_2, log_data_2[header], 'ob', ms=0.2)
+    elif marker == 'line':
+        plot_to_compare.plot(length_steps_1, log_data_1[header], length_steps_2, log_data_2[header])
+    else:
+        print('ERROR! Select marker option')
+        pass
     plot_to_compare.legend(labels=[labels[0], labels[1]], title='Cases', loc='lower right', borderaxespad=1, prop={'size': 6})
     plt.show()
 
@@ -476,19 +482,39 @@ def plot_selected(log_name: str, headers: list[str]):
 
 
 
+#
+# s1 = 'xxt_case1_v2_log'
+# log_path_1 = os.path.join(os.getcwd(), 'log\{}.csv'.format(s1))
+#
+# s2 = 'xxt_case2_v1_log'
+# log_path_2 = os.path.join(os.getcwd(), 'log\{}.csv'.format(s2))
+#
+# s3 = 'xxt_case3_v1_log'
+# log_path_3 = os.path.join(os.getcwd(), 'log\{}.csv'.format(s3))
+#
+# s4 = 'xxt_case4_v1_log'
+# log_path_4 = os.path.join(os.getcwd(), 'log\{}.csv'.format(s4))
 
 
-# log_path_1 = os.path.join(os.getcwd(), 'log\{}.csv'.format('v11-base_case-adptv_log'))  # Расчет 2
-# log_path_2 = os.path.join(os.getcwd(), 'log\{}.csv'.format('v22(big-fxd_1e-5)_log'))  # Расчет 1
-# plot_profiles(log_path_1)
+# plot_compare(log_path_3, log_path_2, 'stepnum', ['1200 K', '1000K'])
+# plot_compare(log_path_3, log_path_4, 'stepnum', ['1200 K', '1400K'], 'line')
+# plot_compare(log_path_1, log_path_2, 'LTE', ['800 K', '1000K'])
+# plot_compare(log_path_3, log_path_4, 'LTE', ['1200 K', '1400K'], 'points')
 
-# plot_selected(log_path_1, ['C2H5* --> C2H4 + H*',
+# plot_selected(log_path_3, ['step'])
+
+# plot_profiles(log_path_3)
+
+
+
+
+
+# plot_selected(log_path_3, ['C2H5* --> C2H4 + H*',
 #                            'C2H6 + H* --> C2H5* + H2',
 #                            'C2H4 + H* --> C2H5*',
 #                            'C2H6 + CH3* --> C2H5* + CH4',
 #                            'C2H6 --> CH3* + CH3*'])
 
-# plot_selected(log_path_1, ['H*', 'CH3*', 'C2H5*'])
+# plot_selected(log_path_3, ['H*', 'CH3*', 'C2H5*'])
 # plotlog('v22(big-fxd_1e-5)_log')
 # plot_compare(log_path_1, log_path_2, ['C2H4'], ['Adaptive step', 'Fixed step (1e-5 m)'])
-# plot_compare(log_path_1, log_path_2, 'stepnum', ['Adaptive step', 'Fixed step (1e-5 m)'])

@@ -6,7 +6,7 @@ Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolida
 '''
 import os
 import chemistry as rctr
-from configs import config_1 as cfg
+from configs import config_7_cond_demo_4 as cfg
 import plotter as pl
 import time
 
