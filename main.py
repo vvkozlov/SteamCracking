@@ -4,14 +4,11 @@ Created     : 22.06.2022
 Author      : Vladimir Kozlov, kozlov.vlr@yandex.ru
 Description : 'Orchestrator program' for Plug-Flog Reactor simulation. Consolidate all scripts together.
 '''
-import math
 import os
 import chemistry as rctr
-import subprocess as sp
-import config_1 as cfg
+from configs import config_1 as cfg
 import plotter as pl
 import time
-import datetime
 
 '''Setting case  name'''
 print('Save log and config files?: y/n')
@@ -58,7 +55,6 @@ inlet_mass = inlet_stream.FLMASS
 
 '''Creating Reactor model'''
 cstreactor = rctr.PFReactor(tube_L / 1000, tube_ID / 1000, tubes_No, rxnset)
-# cstreactor.duty = cfg.furnace_duty
 print('Starting calculations...\n')
 
 '''Setting denominator for number of outputed lines in logs'''
